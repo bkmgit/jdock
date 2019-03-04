@@ -4,6 +4,7 @@
 *.db
 *.csv
 *.pdbqt
+.vs
 doc
 bin
 dev
