@@ -29,7 +29,16 @@ public:
 	array<double, 3> parent_rotorX_to_current_rotorY; //!< Normalized vector pointing from rotor X of parent frame to rotor Y of current frame.
 
 	//! Constructs an active frame, and relates it to its parent frame.
-	explicit frame(const size_t parent, const size_t rotorXsrn, const size_t rotorYsrn, const size_t rotorXidx, const size_t habegin, const size_t hybegin) : parent(parent), rotorXsrn(rotorXsrn), rotorYsrn(rotorYsrn), rotorXidx(rotorXidx), habegin(habegin), hybegin(hybegin), active(true) {}
+	explicit frame(const size_t parent, const size_t rotorXsrn, const size_t rotorYsrn, const size_t rotorXidx, const size_t habegin, const size_t hybegin)
+		: parent(parent)
+		, rotorXsrn(rotorXsrn)
+		, rotorYsrn(rotorYsrn)
+		, rotorXidx(rotorXidx)
+		, habegin(habegin)
+		, hybegin(hybegin)
+		, active(true)
+	{
+	}
 };
 
 //! Represents a ligand.
@@ -73,7 +82,12 @@ private:
 		size_t i0; //!< Index of atom 0.
 		size_t i1; //!< Index of atom 1.
 		size_t p_offset; //!< Index to the XScore types of the two atoms for fast evaluating the scoring function.
-		interacting_pair(const size_t i0, const size_t i1, const size_t p_offset) : i0(i0), i1(i1), p_offset(p_offset) {}
+		interacting_pair(const size_t i0, const size_t i1, const size_t p_offset)
+			: i0(i0)
+			, i1(i1)
+			, p_offset(p_offset)
+		{
+		}
 	};
 
 	vector<interacting_pair> interacting_pairs; //!< Non 1-4 interacting pairs.

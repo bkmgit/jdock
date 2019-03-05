@@ -173,7 +173,9 @@ void receptor::populate(const vector<size_t>& xs, const size_t z, const scoring_
 		const double dz = z_coord - a.coord[2];
 		const double dz_sqr = dz * dz;
 		const double dydx_sqr_ub = scoring_function::cutoff_sqr - dz_sqr;
-		if (dydx_sqr_ub <= 0) continue;
+		if (dydx_sqr_ub <= 0)
+			continue;
+
 		const double dydx_ub = sqrt(dydx_sqr_ub);
 		const double y_lb = a.coord[1] - dydx_ub;
 		const double y_ub = a.coord[1] + dydx_ub;
@@ -182,11 +184,14 @@ void receptor::populate(const vector<size_t>& xs, const size_t z, const scoring_
 		const vector<size_t>& p = p_offset[a.xs];
 		size_t zy_offset = z_offset + num_probes[0] * y_beg;
 		double dy = corner0[1] + granularity * y_beg - a.coord[1];
+
 		for (size_t y = y_beg; y < y_end; ++y, zy_offset += num_probes[0], dy += granularity)
 		{
 			const double dy_sqr = dy * dy;
 			const double dx_sqr_ub = dydx_sqr_ub - dy_sqr;
-			if (dx_sqr_ub <= 0) continue;
+			if (dx_sqr_ub <= 0)
+				continue;
+
 			const double dx_ub = sqrt(dx_sqr_ub);
 			const double x_lb = a.coord[0] - dx_ub;
 			const double x_ub = a.coord[0] + dx_ub;
@@ -195,12 +200,16 @@ void receptor::populate(const vector<size_t>& xs, const size_t z, const scoring_
 			const double dzdy_sqr = dz_sqr + dy_sqr;
 			size_t zyx_offset = zy_offset + x_beg;
 			double dx = corner0[0] + granularity * x_beg - a.coord[0];
+
 			for (size_t x = x_beg; x < x_end; ++x, ++zyx_offset, dx += granularity)
 			{
 				const double dx_sqr = dx * dx;
 				const double r2 = dzdy_sqr + dx_sqr;
-				if (r2 >= scoring_function::cutoff_sqr) continue;
+				if (r2 >= scoring_function::cutoff_sqr)
+					continue;
+
 				const size_t r_offset = static_cast<size_t>(sf.ns * r2);
+
 				for (size_t i = 0; i < n; ++i)
 				{
 					maps[xs[i]][zyx_offset] += sf.e[p[i]][r_offset];
