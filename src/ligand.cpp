@@ -6,7 +6,9 @@
 #include "array.hpp"
 #include "ligand.hpp"
 
-ligand::ligand(const path& p, array<double, 3>& origin) : xs{}, num_active_torsions(0)
+ligand::ligand(const path& p, array<double, 3>& origin)
+	: xs{}
+	, num_active_torsions(0)
 {
 	// Initialize necessary variables for constructing a ligand.
 	lines.reserve(200); // A ligand typically consists of <= 200 lines.

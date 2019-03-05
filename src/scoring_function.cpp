@@ -47,7 +47,10 @@ inline bool is_hbond(const size_t t0, const size_t t1)
 	return (is_hbdonor(t0) && is_hbacceptor(t1)) || (is_hbdonor(t1) && is_hbacceptor(t0));
 }
 
-scoring_function::scoring_function() : e(np, vector<double>(nr)), d(np, vector<double>(nr)), rs(nr)
+scoring_function::scoring_function()
+	: e(np, vector<double>(nr))
+	, d(np, vector<double>(nr))
+	, rs(nr)
 {
 	const double ns_inv = 1.0 / ns;
 	for (size_t i = 0; i < nr; ++i)
