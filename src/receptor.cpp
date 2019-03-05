@@ -1,6 +1,6 @@
 #include <cmath>
 #include <cassert>
-#include <boost/filesystem/fstream.hpp>
+#include <fstream>
 #include "matrix.hpp"
 #include "scoring_function.hpp"
 #include "array.hpp"
@@ -27,7 +27,7 @@ receptor::receptor(const path& p, const array<double, 3>& center, const array<do
 	string line;
 
 	 // Start parsing.
-	for (boost::filesystem::ifstream ifs(p); getline(ifs, line);)
+	for (ifstream ifs(p); getline(ifs, line);)
 	{
 		const string record = line.substr(0, 6);
 		if (record == "ATOM  " || record == "HETATM")
