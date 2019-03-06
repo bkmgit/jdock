@@ -16,13 +16,15 @@ int main(int argc, char* argv[])
 	size_t seed, num_threads, num_trees, num_tasks, max_conformations;
 	double granularity;
 	bool score_only;
+	bool with_rf_score;
 
 	// Process program options.
 	try
 	{
 		// Initialize the default values of optional arguments.
+		using namespace std::chrono;
 		const path default_out_path = ".";
-		const size_t default_seed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+		const size_t default_seed = duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
 		const size_t default_num_threads = boost::thread::hardware_concurrency();
 		const size_t default_num_trees = 500;
 		const size_t default_num_tasks = 64;
@@ -55,6 +57,7 @@ int main(int argc, char* argv[])
 			("conformations", value<size_t>(&max_conformations)->default_value(default_max_conformations), "maximum number of binding conformations to write")
 			("granularity", value<double>(&granularity)->default_value(default_granularity), "density of probe atoms of grid maps")
 			("score_only", bool_switch(&score_only), "scoring without docking")
+			("rf_score", bool_switch(&with_rf_score), "computing RF-Score as well")
 			("help", "this help information")
 			("version", "version information")
 			("config", value<path>(), "configuration file to load options from")
@@ -204,39 +207,49 @@ int main(int argc, char* argv[])
 	scoring_function sf;
 	cnt.init((sf.n + 1) * sf.n >> 1);
 	for (size_t t1 = 0; t1 < sf.n; ++t1)
-	for (size_t t0 = 0; t0 <=  t1; ++t0)
-	{
-		io.post([&, t0, t1]()
+		for (size_t t0 = 0; t0 <= t1; ++t0)
 		{
-			sf.precalculate(t0, t1);
-			cnt.increment();
-		});
-	}
+			io.post([&, t0, t1]()
+			{
+				sf.precalculate(t0, t1);
+				cnt.increment();
+			});
+		}
 	cnt.wait();
 	sf.clear();
 
-	// Train RF-Score on the fly.
-	cout << "Training a random forest of " << num_trees << " trees with " << tree::nv << " variables and " << tree::ns << " samples" << endl;
 	forest f(num_trees, seed);
-	cnt.init(num_trees);
-	for (size_t i = 0; i < num_trees; ++i)
+	if (with_rf_score)
 	{
-		io.post([&, i]()
+		// Train RF-Score on the fly.
+		cout << "Training a random forest of " << num_trees << " trees with " << tree::nv << " variables and " << tree::ns << " samples" << endl;
+		cnt.init(num_trees);
+		for (size_t i = 0; i < num_trees; ++i)
 		{
-			f[i].train(8, f.u01_s);
-			cnt.increment();
-		});
+			io.post([&, i]()
+			{
+				f[i].train(8, f.u01_s);
+				cnt.increment();
+			});
+		}
+		cnt.wait();
+		f.clear();
 	}
-	cnt.wait();
-	f.clear();
 
 	// Output headers to the standard output and the log file.
 	cout << "Creating grid maps of " << granularity << " A and running " << num_tasks << " Monte Carlo searches per ligand" << endl
-		<< "   Index             Ligand   nConfs   idock score (kcal/mol)   RF-Score (pKd)" << endl << setprecision(2);
+		<< "   Index             Ligand   nConfs   idock score (kcal/mol)";
+	if (with_rf_score)
+		cout << "   RF-Score (pKd)";
+	cout << endl << setprecision(2);
 	cout.setf(ios::fixed, ios::floatfield);
+
 	ofstream log(out_path / "log.csv");
 	log.setf(ios::fixed, ios::floatfield);
-	log << "Ligand,nConfs,idock score (kcal/mol),RF-Score (pKd)" << endl << setprecision(2);
+	log << "Ligand,nConfs,idock score (kcal/mol)";
+	if (with_rf_score)
+		log << ",RF-Score (pKd)";
+	log << endl << setprecision(2);
 
 	// Start to dock each input ligand.
 	size_t index = 0;
@@ -318,10 +331,13 @@ int main(int argc, char* argv[])
 				lig.evaluate(c0, sf, rec, -99, e0, f0, g0);
 				auto r0 = lig.compose_result(e0, f0, c0);
 				r0.e_nd = r0.f * lig.flexibility_penalty_factor;
-				r0.rf = lig.calculate_rf_score(r0, rec, f);
+				if (with_rf_score)
+				{
+					r0.rf = lig.calculate_rf_score(r0, rec, f);
+				}
 				id_score = r0.e_nd;
 				rf_score = r0.rf;
-				lig.write_models(output_ligand_path, {{ move(r0) }}, rec);
+				lig.write_models(output_ligand_path, { { move(r0) } }, rec);
 			}
 			else
 			{
@@ -361,7 +377,10 @@ int main(int argc, char* argv[])
 					for (auto& result : results)
 					{
 						result.e_nd = (result.e - best_result_intra_e) * lig.flexibility_penalty_factor;
-						result.rf = lig.calculate_rf_score(result, rec, f);
+						if (with_rf_score)
+						{
+							result.rf = lig.calculate_rf_score(result, rec, f);
+						}
 					}
 					id_score = best_result.e_nd;
 					rf_score = best_result.rf;
@@ -380,8 +399,13 @@ int main(int argc, char* argv[])
 		log << stem << ',' << num_confs;
 		if (num_confs)
 		{
-			cout << "   " << setw(22) << id_score << "   " << setw(14) << rf_score;
-			log << ',' << id_score << ',' << rf_score;
+			cout << "   " << setw(22) << id_score;
+			log << ',' << id_score;
+			if (with_rf_score)
+			{
+				cout << "   " << setw(14) << rf_score;
+				log << ',' << rf_score;
+			}
 		}
 		cout << endl;
 		log << '\n';
