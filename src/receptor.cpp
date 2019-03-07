@@ -45,7 +45,7 @@ receptor::receptor(const path& p, const array<double, 3>& center, const array<do
 			// Parse the line.
 			atom a(line);
 
-			// Harmonize a unsupported atom type to carbon.
+			// Harmonize an unsupported atom type to carbon.
 			if (a.ad_unsupported())
 			{
 				a.ad = 2;
