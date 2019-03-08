@@ -45,15 +45,8 @@ public:
 class ligand
 {
 public:
-	vector<string> lines; //!< Input PDBQT file lines.
-	vector<frame> frames; //!< ROOT and BRANCH frames.
-	vector<atom> heavy_atoms; //!< Heavy atoms. Coordinates are relative to frame origin, which is the first atom by default.
-	vector<atom> hydrogens; //!< Hydrogen atoms. Coordinates are relative to frame origin, which is the first atom by default.
 	array<bool, scoring_function::n> xs; //!< Presence of XScore atom types.
 	size_t num_heavy_atoms; //!< Number of heavy atoms.
-	size_t num_hydrogens; //!< Number of hydrogens.
-	size_t num_frames; //!< Number of frames.
-	size_t num_torsions; //!< Number of torsions.
 	size_t num_active_torsions; //!< Number of active torsions.
 	double flexibility_penalty_factor; //!< A value in (0, 1] to penalize ligand flexibility.
 
@@ -90,6 +83,13 @@ private:
 		}
 	};
 
+	vector<string> lines; //!< Input PDBQT file lines.
+	vector<frame> frames; //!< ROOT and BRANCH frames.
+	vector<atom> heavy_atoms; //!< Heavy atoms. Coordinates are relative to frame origin, which is the first atom by default.
+	vector<atom> hydrogens; //!< Hydrogen atoms. Coordinates are relative to frame origin, which is the first atom by default.
+	size_t num_hydrogens; //!< Number of hydrogens.
+	size_t num_frames; //!< Number of frames.
+	size_t num_torsions; //!< Number of torsions.
 	vector<interacting_pair> interacting_pairs; //!< Non 1-4 interacting pairs.
 };
 
