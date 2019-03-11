@@ -214,9 +214,8 @@ ligand::ligand(const path& p, array<double, 3>& origin)
 	origin = heavy_atoms[frames.front().rotorYidx].coord;
 
 	// Update heavy_atoms[].coord and hydrogens[].coord relative to frame origin.
-	for (size_t k = 0; k < num_frames; ++k)
+	for (const auto& f : frames)
 	{
-		const frame& f = frames[k];
 		const array<double, 3> origin = heavy_atoms[f.rotorYidx].coord;
 		for (size_t i = f.habegin; i < f.haend; ++i)
 		{
@@ -238,29 +237,20 @@ ligand::ligand(const path& p, array<double, 3>& origin)
 		for (size_t i = f1.habegin; i < f1.haend; ++i)
 		{
 			// Find neighbor atoms within 3 consecutive covalent bonds.
-			const vector<size_t>& i0_bonds = bonds[i];
-			const size_t num_i0_bonds = i0_bonds.size();
-			for (size_t i0 = 0; i0 < num_i0_bonds; ++i0)
+			for (const auto b1 : bonds[i])
 			{
-				const size_t b1 = i0_bonds[i0];
 				if (find(neighbors.begin(), neighbors.end(), b1) == neighbors.end())
 				{
 					neighbors.push_back(b1);
 				}
-				const vector<size_t>& i1_bonds = bonds[b1];
-				const size_t num_i1_bonds = i1_bonds.size();
-				for (size_t i1 = 0; i1 < num_i1_bonds; ++i1)
+				for (const auto b2 : bonds[b1])
 				{
-					const size_t b2 = i1_bonds[i1];
 					if (find(neighbors.begin(), neighbors.end(), b2) == neighbors.end())
 					{
 						neighbors.push_back(b2);
 					}
-					const vector<size_t>& i2_bonds = bonds[b2];
-					const size_t num_i2_bonds = i2_bonds.size();
-					for (size_t i2 = 0; i2 < num_i2_bonds; ++i2)
+					for (const auto b3 : bonds[b2])
 					{
-						const size_t b3 = i2_bonds[i2];
 						if (find(neighbors.begin(), neighbors.end(), b3) == neighbors.end())
 						{
 							neighbors.push_back(b3);
@@ -409,10 +399,8 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 	f = e;
 
 	// Calculate intra-ligand free energy.
-	const size_t num_interacting_pairs = interacting_pairs.size();
-	for (size_t i = 0; i < num_interacting_pairs; ++i)
+	for (const auto &p : interacting_pairs)
 	{
-		const interacting_pair& p = interacting_pairs[i];
 		const array<double, 3> r = coor[p.i1] - coor[p.i0];
 		const double r2 = norm_sqr(r);
 		if (r2 < scoring_function::cutoff_sqr)
