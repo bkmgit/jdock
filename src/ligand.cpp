@@ -374,7 +374,7 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 		assert(map.size());
 
 		// Find the index and fraction of the current coor.
-		const array<size_t, 3> index = rec.index(coor[i]);
+		const auto index = rec.index(coor[i]);
 
 		// Assert the validity of index.
 		assert(index[0] + 1 < rec.num_probes[0]);
