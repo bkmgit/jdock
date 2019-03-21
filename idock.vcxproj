@@ -27,6 +27,8 @@
     <ClInclude Include="src\safe_counter.hpp" />
     <ClInclude Include="src\scoring_function.hpp" />
     <ClInclude Include="src\receptor.hpp" />
+    <ClInclude Include="src\stopwatch.hpp" />
+    <ClInclude Include="src\string.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\array.cpp" />
@@ -41,6 +43,8 @@
     <ClCompile Include="src\safe_counter.cpp" />
     <ClCompile Include="src\scoring_function.cpp" />
     <ClCompile Include="src\receptor.cpp" />
+    <ClCompile Include="src\stopwatch.cpp" />
+    <ClCompile Include="src\string.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
