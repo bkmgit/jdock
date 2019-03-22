@@ -16,6 +16,7 @@
     <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <ItemGroup>
+    <ClInclude Include="src\residue.hpp" />
     <ClInclude Include="src\array.hpp" />
     <ClInclude Include="src\atom.hpp" />
     <ClInclude Include="src\conformation.hpp" />
@@ -31,6 +32,7 @@
     <ClInclude Include="src\string.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\residue.cpp" />
     <ClCompile Include="src\array.cpp" />
     <ClCompile Include="src\atom.cpp" />
     <ClCompile Include="src\io_service_pool.cpp" />
