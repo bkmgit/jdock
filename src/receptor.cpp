@@ -4,6 +4,8 @@
 #include "matrix.hpp"
 #include "scoring_function.hpp"
 #include "array.hpp"
+#include "string.hpp"
+#include "residue.hpp"
 #include "receptor.hpp"
 
 receptor::receptor(const path& p, const array<double, 3>& center, const array<double, 3>& size, const double granularity)
@@ -17,13 +19,18 @@ receptor::receptor(const path& p, const array<double, 3>& center, const array<do
 	, num_probes_product(num_probes[0] * num_probes[1] * num_probes[2])
 	, p_offset(scoring_function::n)
 	, maps(scoring_function::n)
+	, donors(num_probes_product)
 {
 	// Initialize necessary variables for constructing a receptor.
 	atoms.reserve(5000); // A receptor typically consists of <= 5,000 atoms.
+	residues.reserve(1000); // A receptor typically consists of <= 1,000 residues.
 
 	// Initialize helper variables for parsing.
-	string residue = "XXXX"; // Current residue sequence, used to track residue change, initialized to a dummy value.
+	string residue_seq = "XXXX"; // Current residue sequence, used to track residue change, initialized to a dummy value.
 	size_t residue_start = 0; // The starting atom of the current residue.
+	size_t residue_idx = -1; // The index in residues of the current residue.
+	char altloc = 0; // Alternate location indicator.
+
 	string line;
 
 	 // Start parsing.
@@ -33,17 +40,47 @@ receptor::receptor(const path& p, const array<double, 3>& center, const array<do
 		if (record == "ATOM  " || record == "HETATM")
 		{
 			// Parse the residue sequence located at 1-based [23, 26].
-			if ((line[25] != residue[3]) || (line[24] != residue[2]) || (line[23] != residue[1]) || (line[22] != residue[0])) // This line is the start of a new residue.
+			if ((line[25] != residue_seq[3]) || (line[24] != residue_seq[2]) || (line[23] != residue_seq[1]) || (line[22] != residue_seq[0])) // This line is the start of a new residue.
 			{
-				residue[3] = line[25];
-				residue[2] = line[24];
-				residue[1] = line[23];
-				residue[0] = line[22];
+				residue_seq[3] = line[25];
+				residue_seq[2] = line[24];
+				residue_seq[1] = line[23];
+				residue_seq[0] = line[22];
 				residue_start = atoms.size();
+
+				// Reset altloc filter for new residue.
+				altloc = 0;
+
+				residue res(line);
+
+				// Only amino acid should be stored and contribute energy.
+				if (res.is_amino_acid())
+				{
+					residue_idx = residues.size();
+					residues.push_back(move(res));
+				}
+				else
+				{
+					residue_idx = -1;
+				}
+			}
+
+			// Discard non-amino acid.
+			if (residue_idx < 0)
+				continue;
+
+			// A non space alternate location indicator means
+			if (!isspace(line[16]))
+			{
+				// Met the altloc for the first time.
+				if (!altloc)
+					altloc = line[16];
+				else if (altloc != line[16]) // Discard those with different residue-wide altloc than the first.
+					continue;
 			}
 
 			// Parse the line.
-			atom a(line);
+			atom a(line, residue_idx);
 
 			// Harmonize an unsupported atom type to carbon.
 			if (a.ad_unsupported())
@@ -119,7 +156,7 @@ receptor::receptor(const path& p, const array<double, 3>& center, const array<do
 		}
 		else if (record == "TER   ")
 		{
-			residue = "XXXX";
+			residue_seq = "XXXX";
 		}
 	}
 }
@@ -146,6 +183,26 @@ size_t receptor::index(const array<size_t, 3>& idx) const
 	return num_probes[0] * (num_probes[1] * idx[2] + idx[1]) + idx[0];
 }
 
+array<size_t, 3> receptor::coord(const size_t index) const
+{
+	return
+	{{
+		index % num_probes[0],
+		index / num_probes[0] % num_probes[1],
+		index / num_probes[0] / num_probes[1],
+	}};
+}
+
+array<double, 3> receptor::coord(const array<size_t, 3>& index) const
+{
+	return
+	{{
+		index[0] * granularity + corner0[0],
+		index[1] * granularity + corner0[1],
+		index[2] * granularity + corner0[2],
+	}};
+}
+
 void receptor::precalculate(const vector<size_t>& xs)
 {
 	const size_t nxs = xs.size();
@@ -167,9 +224,13 @@ void receptor::populate(const vector<size_t>& xs, const size_t z, const scoring_
 	const double z_coord = corner0[2] + granularity * z;
 	const size_t z_offset = num_probes[0] * num_probes[1] * z;
 
-	for (const auto& a : atoms)
+	assert(atoms.size() < UINT16_MAX);
+
+	for (size_t idx = 0; idx < atoms.size(); idx++)
 	{
+		const auto& a = atoms[idx];
 		assert(!a.is_hydrogen());
+
 		const double dz = z_coord - a.coord[2];
 		const double dz_sqr = dz * dz;
 		const double dydx_sqr_ub = scoring_function::cutoff_sqr - dz_sqr;
@@ -214,6 +275,8 @@ void receptor::populate(const vector<size_t>& xs, const size_t z, const scoring_
 				{
 					maps[xs[i]][zyx_offset] += sf.e[p[i]][r_offset];
 				}
+
+				donors[zyx_offset].push_back(static_cast<uint16_t>(idx));
 			}
 		}
 	}

@@ -5,6 +5,7 @@
 #include <filesystem>
 #include "scoring_function.hpp"
 #include "atom.hpp"
+#include "residue.hpp"
 using namespace std::filesystem;
 
 //! Represents a receptor.
@@ -22,6 +23,8 @@ public:
 	const size_t num_probes_product; //!< Product of num_probes[0,1,2].
 	vector<atom> atoms; //!< Receptor atoms.
 	vector<vector<double>> maps; //!< Grid maps.
+	vector<vector<uint16_t>> donors; //!< Indicies of atoms of which contribute to a box grid. The number of atoms is typically less than 65536.
+	vector<residue> residues; //!< Receptor residues.
 
 	//! Returns true if a coordinate is within current half-open-half-close box, i.e. [corner0, corner1).
 	bool within(const array<double, 3>& coord) const;
@@ -31,6 +34,12 @@ public:
 
 	//! Reduces a 3D index to 1D with x being the lowest dimension.
 	size_t index(const array<size_t, 3>& idx) const;
+
+	//! Converts 1D index back to a 3D index with x being the lowest dimension.
+	array<size_t, 3> receptor::coord(const size_t index) const;
+
+	//! Returns the coordinate for the given index of the half-open-half-close grid.
+	array<double, 3> coord(const array<size_t, 3>& index) const;
 
 	//! Precalculates auxiliary constants to accelerate grid map creation.
 	void precalculate(const vector<size_t>& xs);
