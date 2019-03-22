@@ -13,10 +13,12 @@ using namespace std::chrono;
 class stopwatch
 {
 public:
+	//! Create a new stopwatch and start running immediately.
+	static stopwatch start_new();
+
+public:
 	//! Constructs a standby stopwatch.
 	explicit stopwatch();
-
-	static stopwatch start_new();
 
 	void start();
 
@@ -28,13 +30,13 @@ public:
 
 	inline bool is_running();
 
-	//!< Accumulated elapsed nanoseconds.
+	//! Accumulated elapsed nanoseconds.
 	long long elapsed();
 
-	//!< Accumulated elapsed seconds.
+	//! Accumulated elapsed seconds.
 	double elapsed_sec();
 
-	//!< Accumulated elapsed time in mm:ss.sss format.
+	//! Accumulated elapsed time in mm:ss.sss format.
 	string elapsed_str();
 
 private:

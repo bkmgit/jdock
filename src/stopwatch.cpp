@@ -49,7 +49,7 @@ bool stopwatch::is_running()
 	return running;
 }
 
-//!< Accumulated elapsed nanoseconds.
+//! Accumulated elapsed nanoseconds.
 long long stopwatch::elapsed()
 {
 	if (running)
@@ -57,13 +57,13 @@ long long stopwatch::elapsed()
 	return elapsed_ns;
 }
 
-//!< Accumulated elapsed seconds.
+//! Accumulated elapsed seconds.
 double stopwatch::elapsed_sec()
 {
 	return elapsed() / 1e9;
 }
 
-//!< Accumulated elapsed time in mm:ss.sss format.
+//! Accumulated elapsed time in mm:ss.sss format.
 string stopwatch::elapsed_str()
 {
 	auto e = elapsed(), sec = e / nanoseconds::period::den;

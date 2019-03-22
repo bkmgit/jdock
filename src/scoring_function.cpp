@@ -6,21 +6,21 @@
 const double scoring_function::cutoff_sqr = cutoff * cutoff;
 const array<double, scoring_function::n> scoring_function::vdw
 {{
-	1.9, //   C_H
-	1.9, //   C_P
-	1.8, //   N_P
-	1.8, //   N_D
-	1.8, //   N_A
-	1.8, //   N_DA
-	1.7, //   O_A
-	1.7, //   O_DA
-	2.0, //   S_P
-	2.1, //   P_P
-	1.5, //   F_H
-	1.8, //  Cl_H
-	2.0, //  Br_H
-	2.2, //   I_H
-	1.2, // Met_D
+	1.9, //  0   C_H
+	1.9, //  1   C_P
+	1.8, //  2   N_P
+	1.8, //  3   N_D
+	1.8, //  4   N_A
+	1.8, //  5   N_DA
+	1.7, //  6   O_A
+	1.7, //  7   O_DA
+	2.0, //  8   S_P
+	2.1, //  9   P_P
+	1.5, // 10   F_H
+	1.8, // 11  Cl_H
+	2.0, // 12  Br_H
+	2.2, // 13   I_H
+	1.2, // 14 Met_D
 }};
 
 //! Returns true if the XScore atom type is hydrophobic.

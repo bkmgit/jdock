@@ -34,6 +34,7 @@ public:
 
 	vector<vector<double>> e; //!< Scoring function values.
 	vector<vector<double>> d; //!< Scoring function derivatives divided by distance.
+
 private:
 	static const array<double, n> vdw; //!< Van der Waals distances for XScore atom types.
 	vector<double> rs; //!< Distance samples.
