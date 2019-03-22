@@ -161,6 +161,7 @@ int main(int argc, char* argv[])
 	// Parse the receptor.
 	cout << "Parsing the receptor " << receptor_path << endl;
 	receptor rec(receptor_path, center, size, granularity);
+	cout << "Found " << rec.atoms.size() << " atoms in " << rec.residues.size() << " residues in receptor " << receptor_path << endl;
 
 	// Reserve storage for result containers.
 	vector<vector<result>> result_containers(num_tasks);
@@ -237,16 +238,22 @@ int main(int argc, char* argv[])
 	}
 
 	// Output headers to the standard output and the log file.
-	cout << "Creating grid maps of " << granularity << " A and running " << num_tasks << " Monte Carlo searches per ligand" << endl
-		<< "   Index             Ligand   nConfs   idock score (kcal/mol)";
+	const char separator = '|';
+	cout << "Creating grid maps of " << granularity << " A and running " << num_tasks << " Monte Carlo searches per ligand" << endl;
+	cout              << setw( 8) << "Index"
+		 << separator << setw(16) << "Ligand"
+		 << separator << setw( 8) << "Atoms" 
+		 << separator << setw( 8) << "Torsions"
+		 << separator << setw( 6) << "nConfs"
+		 << separator << setw(22) << "idock score (kcal/mol)";
 	if (with_rf_score)
-		cout << "   RF-Score (pKd)";
+		cout << separator << setw(14) << "RF-Score (pKd)";
 	cout << endl << setprecision(2);
 	cout.setf(ios::fixed, ios::floatfield);
 
-	ofstream log(out_path / "log.csv");
+	ofstream log(out_path / (receptor_path.stem().string() + ".csv"));
 	log.setf(ios::fixed, ios::floatfield);
-	log << "Ligand,nConfs,idock score (kcal/mol)";
+	log << "Ligand,Atoms,Torsions,nConfs,idock score (kcal/mol)";
 	if (with_rf_score)
 		log << ",RF-Score (pKd)";
 	log << endl << setprecision(2);
@@ -257,7 +264,17 @@ int main(int argc, char* argv[])
 	{
 		// Output the ligand file stem.
 		const string stem = input_ligand_path.stem().string();
-		cout << setw(8) << ++index << "   " << setw(16) << stem << "   " << flush;
+		cout             << setw( 8) << ++index
+			<< separator << setw(16) << stem
+			<< flush;
+		log << stem;
+
+		// Parse the ligand.
+		array<double, 3> origin;
+		const ligand lig(input_ligand_path, origin);
+		cout << separator << setw(8) << lig.num_heavy_atoms
+			<< separator << setw(8) << lig.num_active_torsions;
+		log << ',' << lig.num_heavy_atoms << ',' << lig.num_active_torsions;
 
 		// Check if the current ligand has already been docked.
 		size_t num_confs = 0;
@@ -287,10 +304,6 @@ int main(int argc, char* argv[])
 		}
 		else
 		{
-			// Parse the ligand.
-			array<double, 3> origin;
-			const ligand lig(input_ligand_path, origin);
-
 			// Find atom types that are present in the current ligand but not present in the grid maps.
 			vector<size_t> xs;
 			for (size_t t = 0; t < sf.n; ++t)
@@ -388,6 +401,76 @@ int main(int argc, char* argv[])
 					// Write models to file.
 					lig.write_models(output_ligand_path, results, rec);
 
+					// Output per-amino-acid energy for all conformations.
+					ofstream rep(out_path / (stem + ".csv"));
+					rep.setf(ios::fixed, ios::floatfield);
+					rep << "Chain ID,Residue name,Residue sequence";
+
+					vector<bool> mask(rec.residues.size());
+					for (size_t i = 0; i < num_confs; i++)
+					{
+						lig.calculate_per_aa(results[i], sf, rec, mask);
+						rep << ',' << "Conf " << (i + 1);
+					}
+					rep << endl << setprecision(3);
+
+					for (size_t k = 0; k < mask.size(); k++)
+					{
+						if (!mask[k])
+							continue;
+
+						const auto& res = rec.residues[k];
+						rep << res.chain << ',' << res.name << ',' << res.seq;
+
+						for (size_t i = 0; i < num_confs; i++)
+						{
+							rep << ',';
+							if (results[i].e_aa[k] != 0.0)
+								rep << results[i].e_aa[k];
+						}
+
+						rep << endl;
+					}
+
+					rep << endl;
+					if (with_rf_score)
+					{
+						rep << "Binding Affinity,,";
+						for (size_t i = 0; i < num_confs; i++)
+						{
+							rep << ',' << results[i].rf;
+						}
+						rep << endl;
+					}
+
+					rep << "Intra-Ligand Free,,";
+					for (size_t i = 0; i < num_confs; i++)
+					{
+						rep << ',' << (results[i].e - results[i].f);
+					}
+					rep << endl;
+
+					rep << "Inter-Ligand Free,,";
+					for (size_t i = 0; i < num_confs; i++)
+					{
+						rep << ',' << results[i].f;
+					}
+					rep << endl;
+
+					rep << "Total Free Energy,,";
+					for (size_t i = 0; i < num_confs; i++)
+					{
+						rep << ',' << results[i].e;
+					}
+					rep << endl;
+
+					rep << "Normalized Total Free Energy,,";
+					for (size_t i = 0; i < num_confs; i++)
+					{
+						rep << ',' << results[i].e_nd;
+					}
+					rep << endl;
+
 					// Clear the results of the current ligand.
 					results.clear();
 				}
@@ -395,22 +478,22 @@ int main(int argc, char* argv[])
 		}
 
 		// If output file or conformations are found, output the idock score and RF-Score.
-		cout << setw(6) << num_confs;
-		log << stem << ',' << num_confs;
+		cout << separator << setw(6) << num_confs;
+		log << ',' << num_confs;
 		if (num_confs)
 		{
-			cout << "   " << setw(22) << id_score;
+			cout << separator << setw(22) << id_score;
 			log << ',' << id_score;
 			if (with_rf_score)
 			{
-				cout << "   " << setw(14) << rf_score;
+				cout << separator << setw(14) << rf_score;
 				log << ',' << rf_score;
 			}
 		}
 		cout << endl;
-		log << '\n';
+		log << endl;
 
-		// Output to the log file in csv format. The log file can be sorted using: head -1 log.csv && tail -n +2 log.csv | awk -F, '{ printf "%s,%s\n", $2||0, $0 }' | sort -t, -k1nr -k3n | cut -d, -f2-
+		// Output to the log file in csv format. The log file can be sorted using: head -1 log.csv && tail -n +2 log.csv | awk -F, '{ printf "%s,%s\n", $2||0, $0 }' | sort -t, -k1nr -k6n | cut -d, -f2-
 	}
 
 	// Wait until the io service pool has finished all its tasks.
