@@ -14,6 +14,7 @@ public:
 	double rf; //!< RF-Score binding affinity.
 	vector<array<double, 3>> heavy_atoms; //!< Heavy atom coordinates.
 	vector<array<double, 3>> hydrogens; //!< Hydrogen atom coordinates.
+	vector<double> e_aa; //!< Per amino inter-molecular acid free energy.
 
 	//! Constructs a result from free energy e, force f, heavy atom coordinates and hydrogen atom coordinates.
 	explicit result(const double e, const double f, vector<array<double, 3>>&& heavy_atoms_, vector<array<double, 3>>&& hydrogens_)
