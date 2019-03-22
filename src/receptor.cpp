@@ -24,6 +24,8 @@ receptor::receptor(const path& p, const array<double, 3>& center, const array<do
 	// Initialize necessary variables for constructing a receptor.
 	atoms.reserve(5000); // A receptor typically consists of <= 5,000 atoms.
 	residues.reserve(1000); // A receptor typically consists of <= 1,000 residues.
+	for (auto& donor : donors)
+		donor.reserve(50); // A grid typically receives contribution from <= 50 receptor atoms.
 
 	// Initialize helper variables for parsing.
 	string residue_seq = "XXXX"; // Current residue sequence, used to track residue change, initialized to a dummy value.
