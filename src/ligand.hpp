@@ -65,6 +65,9 @@ public:
 	//! Writes a given number of conformations from a result container into a output ligand file in PDBQT format.
 	void write_models(const path& output_ligand_path, const vector<result>& results, const receptor& rec) const;
 
+	//! Revisit a result and calculate inter-molecular free energy contribution of every single residue.
+	void calculate_per_aa(result& result, const scoring_function& sf, const receptor& rec, vector<bool>& mask) const;
+
 	void monte_carlo(vector<result>& results, const size_t seed, const scoring_function& sf, const receptor& rec) const;
 
 private:

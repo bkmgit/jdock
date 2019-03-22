@@ -585,6 +585,47 @@ void ligand::write_models(const path& output_ligand_path, const vector<result>& 
 	}
 }
 
+//! Revisit a result and calculate inter-molecular free energy contribution of every single residue.
+void ligand::calculate_per_aa(result& result, const scoring_function& sf, const receptor& rec, vector<bool>& mask) const
+{
+	auto& eaa = result.e_aa;
+	assert(eaa.empty());
+
+	eaa.resize(rec.residues.size());
+
+	for (size_t k = 0; k < result.heavy_atoms.size(); k++)
+	{
+		const auto& coord = result.heavy_atoms[k];
+		const auto xs = heavy_atoms[k].xs;
+
+		// Find the index of the current coord.
+		const auto index = rec.index(coord);
+		const auto coord_grid = rec.coord(index); // Aligned coordinate.
+
+		// Iterate through all atom ids contributing energy to the grid.
+		for (auto atom_idx : rec.donors[rec.index(index)])
+		{
+			assert(atom_idx < rec.atoms.size());
+
+			const auto& a = rec.atoms[atom_idx];
+			assert(!a.is_hydrogen());
+
+			auto r2 = distance_sqr(a.coord, coord_grid);
+			size_t r_offset = static_cast<size_t>(sf.ns * r2);
+			assert(r_offset < sf.nr);
+
+			size_t p = mp(a.xs, xs);
+			assert(p < sf.np);
+
+			assert(!sf.e[p].empty());
+			eaa[a.residue] += sf.e[p][r_offset]; // Aggregate the energy.
+
+			// Mark contributing residue.
+			mask[a.residue] = true;
+		}
+	}
+}
+
 void ligand::monte_carlo(vector<result>& results, const size_t seed, const scoring_function& sf, const receptor& rec) const
 {
 	// Define constants.
@@ -753,10 +794,10 @@ void ligand::monte_carlo(vector<result>& results, const size_t seed, const scori
 			ryp = 1 / yp;
 			pco = ryp * (ryp * yhy + alpha);
 			for (size_t i = 0; i < num_variables; ++i)
-			for (size_t j = i; j < num_variables; ++j) // includes i
-			{
-				h[mr(i, j)] += ryp * (mhy[i] * p[j] + mhy[j] * p[i]) + pco * p[i] * p[j];
-			}
+				for (size_t j = i; j < num_variables; ++j) // includes i
+				{
+					h[mr(i, j)] += ryp * (mhy[i] * p[j] + mhy[j] * p[i]) + pco * p[i] * p[j];
+				}
 
 			// Move to the next iteration.
 			c1 = c2;
