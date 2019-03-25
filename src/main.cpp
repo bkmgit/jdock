@@ -79,7 +79,7 @@ int main(int argc, char* argv[])
 		// If version is requested, print the version and exit.
 		if (vm.count("version"))
 		{
-			cout << "2.2.2" << endl;
+			cout << "2.2.2b" << endl;
 			return 0;
 		}
 
@@ -367,7 +367,6 @@ int main(int argc, char* argv[])
 					result_container.clear();
 				}
 
-				// If conformations are found, output them.
 				num_confs = results.size();
 				if (num_confs)
 				{
@@ -389,7 +388,7 @@ int main(int argc, char* argv[])
 
 			if (score_only || both_score_dock)
 			{
-				num_confs++;
+				++num_confs;
 				conformation c0(lig.num_active_torsions);
 				c0.position = origin;
 				double e0, f0;
@@ -406,6 +405,7 @@ int main(int argc, char* argv[])
 				results.insert(results.begin(), move(r0));
 			}
 
+			// If conformations are found, output them.
 			if (num_confs)
 			{
 				// Write models to file.
@@ -417,7 +417,7 @@ int main(int argc, char* argv[])
 				rep << "Chain ID,Residue name,Residue sequence";
 
 				vector<bool> mask(rec.residues.size());
-				for (size_t i = 0; i < num_confs; i++)
+				for (size_t i = 0; i < num_confs; ++i)
 				{
 					lig.calculate_per_aa(results[i], sf, rec, mask);
 					if (score_only || both_score_dock)
@@ -435,7 +435,7 @@ int main(int argc, char* argv[])
 				}
 				rep << endl << setprecision(3);
 
-				for (size_t k = 0; k < mask.size(); k++)
+				for (size_t k = 0; k < mask.size(); ++k)
 				{
 					if (!mask[k])
 						continue;
@@ -443,7 +443,7 @@ int main(int argc, char* argv[])
 					const auto& res = rec.residues[k];
 					rep << res.chain << ',' << res.name << ',' << res.seq;
 
-					for (size_t i = 0; i < num_confs; i++)
+					for (size_t i = 0; i < num_confs; ++i)
 					{
 						rep << ',';
 						if (results[i].e_aa[k] != 0.0)
@@ -457,7 +457,7 @@ int main(int argc, char* argv[])
 				if (with_rf_score)
 				{
 					rep << "Binding Affinity,,";
-					for (size_t i = 0; i < num_confs; i++)
+					for (size_t i = 0; i < num_confs; ++i)
 					{
 						rep << ',' << results[i].rf;
 					}
@@ -465,28 +465,28 @@ int main(int argc, char* argv[])
 				}
 
 				rep << "Intra-Ligand Free,,";
-				for (size_t i = 0; i < num_confs; i++)
+				for (size_t i = 0; i < num_confs; ++i)
 				{
 					rep << ',' << (results[i].e - results[i].f);
 				}
 				rep << endl;
 
 				rep << "Inter-Ligand Free,,";
-				for (size_t i = 0; i < num_confs; i++)
+				for (size_t i = 0; i < num_confs; ++i)
 				{
 					rep << ',' << results[i].f;
 				}
 				rep << endl;
 
 				rep << "Total Free Energy,,";
-				for (size_t i = 0; i < num_confs; i++)
+				for (size_t i = 0; i < num_confs; ++i)
 				{
 					rep << ',' << results[i].e;
 				}
 				rep << endl;
 
 				rep << "Normalized Total Free Energy,,";
-				for (size_t i = 0; i < num_confs; i++)
+				for (size_t i = 0; i < num_confs; ++i)
 				{
 					rep << ',' << results[i].e_nd;
 				}

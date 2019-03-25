@@ -593,7 +593,7 @@ void ligand::calculate_per_aa(result& result, const scoring_function& sf, const 
 
 	eaa.resize(rec.residues.size());
 
-	for (size_t k = 0; k < result.heavy_atoms.size(); k++)
+	for (size_t k = 0; k < result.heavy_atoms.size(); ++k)
 	{
 		const auto& coord = result.heavy_atoms[k];
 		const auto xs = heavy_atoms[k].xs;

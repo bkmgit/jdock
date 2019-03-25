@@ -4,8 +4,8 @@
 string trim(const string&& str)
 {
 	size_t i, j;
-	for (i = 0; i < str.size() && isspace(str[i]); i++);
-	for (j = str.size(); j > i && isspace(str[j - 1]); j--);
+	for (i = 0; i < str.size() && isspace(str[i]); ++i);
+	for (j = str.size(); j > i && isspace(str[j - 1]); --j);
 
 	return str.substr(i, j - i);
 }
@@ -14,7 +14,7 @@ string trim(const string&& str)
 string trim_start(const string&& str)
 {
 	size_t i;
-	for (i = 0; i < str.size() && isspace(str[i]); i++);
+	for (i = 0; i < str.size() && isspace(str[i]); ++i);
 
 	return str.substr(i);
 }
@@ -23,7 +23,7 @@ string trim_start(const string&& str)
 string trim_end(const string&& str)
 {
 	size_t j;
-	for (j = str.size(); j > 0 && isspace(str[j - 1]); j--);
+	for (j = str.size(); j > 0 && isspace(str[j - 1]); --j);
 
 	return str.substr(0, j);
 }

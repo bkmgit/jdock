@@ -228,7 +228,7 @@ void receptor::populate(const vector<size_t>& xs, const size_t z, const scoring_
 
 	assert(atoms.size() < UINT16_MAX);
 
-	for (size_t idx = 0; idx < atoms.size(); idx++)
+	for (size_t idx = 0; idx < atoms.size(); ++idx)
 	{
 		const auto& a = atoms[idx];
 		assert(!a.is_hydrogen());
