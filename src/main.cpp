@@ -15,8 +15,7 @@ int main(int argc, char* argv[])
 	array<double, 3> center, size;
 	size_t seed, num_threads, num_trees, num_tasks, max_conformations;
 	double granularity;
-	bool score_only;
-	bool with_rf_score;
+	bool score_only, both_score_dock, with_rf_score;
 
 	// Process program options.
 	try
@@ -56,8 +55,9 @@ int main(int argc, char* argv[])
 			("tasks", value<size_t>(&num_tasks)->default_value(default_num_tasks), "number of Monte Carlo tasks for global search")
 			("conformations", value<size_t>(&max_conformations)->default_value(default_max_conformations), "maximum number of binding conformations to write")
 			("granularity", value<double>(&granularity)->default_value(default_granularity), "density of probe atoms of grid maps")
-			("score_only", bool_switch(&score_only), "scoring without docking")
-			("rf_score", bool_switch(&with_rf_score), "computing RF-Score as well")
+			("score_only", bool_switch(&score_only), "scoring input ligand conformation without docking, this option conflicts with --score_dock")
+			("score_dock", bool_switch(&both_score_dock), "scoring input ligand conformation as well as docking, this option conflicts with --score_only")
+			("rf_score", bool_switch(&with_rf_score), "compute RF-Score as well")
 			("help", "this help information")
 			("version", "version information")
 			("config", value<path>(), "configuration file to load options from")
@@ -149,6 +149,11 @@ int main(int argc, char* argv[])
 		if (granularity <= 0)
 		{
 			cerr << "Option granularity must be positive" << endl;
+			return 1;
+		}
+		if (score_only && both_score_dock)
+		{
+			cerr << "Option --score_only and --score_dock cannot be combined" << endl;
 			return 1;
 		}
 	}
@@ -334,25 +339,7 @@ int main(int argc, char* argv[])
 				cnt.wait();
 			}
 
-			if (score_only)
-			{
-				num_confs = 1;
-				conformation c0(lig.num_active_torsions);
-				c0.position = origin;
-				double e0, f0;
-				change g0(0);
-				lig.evaluate(c0, sf, rec, -99, e0, f0, g0);
-				auto r0 = lig.compose_result(e0, f0, c0);
-				r0.e_nd = r0.f * lig.flexibility_penalty_factor;
-				if (with_rf_score)
-				{
-					r0.rf = lig.calculate_rf_score(r0, rec, f);
-				}
-				id_score = r0.e_nd;
-				rf_score = r0.rf;
-				lig.write_models(output_ligand_path, { { move(r0) } }, rec);
-			}
-			else
+			if (!score_only)
 			{
 				// Run the Monte Carlo tasks.
 				cnt.init(num_tasks);
@@ -397,83 +384,116 @@ int main(int argc, char* argv[])
 					}
 					id_score = best_result.e_nd;
 					rf_score = best_result.rf;
+				}
+			}
 
-					// Write models to file.
-					lig.write_models(output_ligand_path, results, rec);
+			if (score_only || both_score_dock)
+			{
+				num_confs++;
+				conformation c0(lig.num_active_torsions);
+				c0.position = origin;
+				double e0, f0;
+				change g0(0);
+				lig.evaluate(c0, sf, rec, -99, e0, f0, g0);
+				auto r0 = lig.compose_result(e0, f0, c0);
+				r0.e_nd = r0.f * lig.flexibility_penalty_factor;
+				if (with_rf_score)
+				{
+					r0.rf = lig.calculate_rf_score(r0, rec, f);
+				}
+				id_score = r0.e_nd;
+				rf_score = r0.rf;
+				results.insert(results.begin(), move(r0));
+			}
 
-					// Output per-amino-acid energy for all conformations.
-					ofstream rep(out_path / (stem + ".csv"));
-					rep.setf(ios::fixed, ios::floatfield);
-					rep << "Chain ID,Residue name,Residue sequence";
+			if (num_confs)
+			{
+				// Write models to file.
+				lig.write_models(output_ligand_path, results, rec);
 
-					vector<bool> mask(rec.residues.size());
-					for (size_t i = 0; i < num_confs; i++)
+				// Output per-amino-acid energy for all conformations.
+				ofstream rep(out_path / (stem + ".csv"));
+				rep.setf(ios::fixed, ios::floatfield);
+				rep << "Chain ID,Residue name,Residue sequence";
+
+				vector<bool> mask(rec.residues.size());
+				for (size_t i = 0; i < num_confs; i++)
+				{
+					lig.calculate_per_aa(results[i], sf, rec, mask);
+					if (score_only || both_score_dock)
 					{
-						lig.calculate_per_aa(results[i], sf, rec, mask);
+						rep << ',';
+						if (i == 0)
+							rep << "Conf Input";
+						else
+							rep << "Conf " << i;
+					}
+					else
+					{
 						rep << ',' << "Conf " << (i + 1);
 					}
-					rep << endl << setprecision(3);
-
-					for (size_t k = 0; k < mask.size(); k++)
-					{
-						if (!mask[k])
-							continue;
-
-						const auto& res = rec.residues[k];
-						rep << res.chain << ',' << res.name << ',' << res.seq;
-
-						for (size_t i = 0; i < num_confs; i++)
-						{
-							rep << ',';
-							if (results[i].e_aa[k] != 0.0)
-								rep << results[i].e_aa[k];
-						}
-
-						rep << endl;
-					}
-
-					rep << endl;
-					if (with_rf_score)
-					{
-						rep << "Binding Affinity,,";
-						for (size_t i = 0; i < num_confs; i++)
-						{
-							rep << ',' << results[i].rf;
-						}
-						rep << endl;
-					}
-
-					rep << "Intra-Ligand Free,,";
-					for (size_t i = 0; i < num_confs; i++)
-					{
-						rep << ',' << (results[i].e - results[i].f);
-					}
-					rep << endl;
-
-					rep << "Inter-Ligand Free,,";
-					for (size_t i = 0; i < num_confs; i++)
-					{
-						rep << ',' << results[i].f;
-					}
-					rep << endl;
-
-					rep << "Total Free Energy,,";
-					for (size_t i = 0; i < num_confs; i++)
-					{
-						rep << ',' << results[i].e;
-					}
-					rep << endl;
-
-					rep << "Normalized Total Free Energy,,";
-					for (size_t i = 0; i < num_confs; i++)
-					{
-						rep << ',' << results[i].e_nd;
-					}
-					rep << endl;
-
-					// Clear the results of the current ligand.
-					results.clear();
 				}
+				rep << endl << setprecision(3);
+
+				for (size_t k = 0; k < mask.size(); k++)
+				{
+					if (!mask[k])
+						continue;
+
+					const auto& res = rec.residues[k];
+					rep << res.chain << ',' << res.name << ',' << res.seq;
+
+					for (size_t i = 0; i < num_confs; i++)
+					{
+						rep << ',';
+						if (results[i].e_aa[k] != 0.0)
+							rep << results[i].e_aa[k];
+					}
+
+					rep << endl;
+				}
+
+				rep << endl;
+				if (with_rf_score)
+				{
+					rep << "Binding Affinity,,";
+					for (size_t i = 0; i < num_confs; i++)
+					{
+						rep << ',' << results[i].rf;
+					}
+					rep << endl;
+				}
+
+				rep << "Intra-Ligand Free,,";
+				for (size_t i = 0; i < num_confs; i++)
+				{
+					rep << ',' << (results[i].e - results[i].f);
+				}
+				rep << endl;
+
+				rep << "Inter-Ligand Free,,";
+				for (size_t i = 0; i < num_confs; i++)
+				{
+					rep << ',' << results[i].f;
+				}
+				rep << endl;
+
+				rep << "Total Free Energy,,";
+				for (size_t i = 0; i < num_confs; i++)
+				{
+					rep << ',' << results[i].e;
+				}
+				rep << endl;
+
+				rep << "Normalized Total Free Energy,,";
+				for (size_t i = 0; i < num_confs; i++)
+				{
+					rep << ',' << results[i].e_nd;
+				}
+				rep << endl;
+
+				// Clear the results of the current ligand.
+				results.clear();
 			}
 		}
 
