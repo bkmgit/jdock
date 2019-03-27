@@ -35,7 +35,21 @@ receptor::receptor(const path& p, const array<double, 3>& center, const array<do
 
 	string line;
 
-	 // Start parsing.
+	// Start parsing.
+	// To prepare pdbqt for receptor, please use vega. With prepare_receptor4.py, atoms with alternate location are not filtered.
+	// With OpenBabel, atoms loses alternate location indicators, hydrogens are all treated polar when charges are not calculated,
+	// receptor with non-continuous residue numbering is divided into multiple segments, hydrogens are appended to the end of file,
+	// and in some cases OpenBabel generates wrong residue names.
+	//
+	// [VEGA ZZ Usage]
+	// vega receptor.pdb -o receptor.pdbqt -f VINA -c Gasteiger -p VINA -l GEN -r APOLAR -w
+	//   -o receptor.pdbqt  write to file with name receptor.pdbqt.
+	//   -f VINA            output AudoDock Vina pdbqt format.
+	//   -c Gasteiger       charge
+	//   -p VINA            assign atom types using the AutoDock Vina force field (based on AMBER) template.
+	//   -l GEN             add hydrogens with generic organic molecule.
+	//   -r APOLAR          remove non-polar hydrogens.
+	//   -w                 remove water.
 	for (ifstream ifs(p); getline(ifs, line);)
 	{
 		const string record = line.substr(0, 6);

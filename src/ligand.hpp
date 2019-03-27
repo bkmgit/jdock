@@ -63,7 +63,7 @@ public:
 	double calculate_rf_score(const result& r, const receptor& rec, const forest& f) const;
 
 	//! Writes a given number of conformations from a result container into a output ligand file in PDBQT format.
-	void write_models(const path& output_ligand_path, const vector<result>& results, const receptor& rec) const;
+	void write_models(const path& output_ligand_path, const vector<result>& results, const receptor& rec, bool has_input_conf) const;
 
 	//! Revisit a result and calculate inter-molecular free energy contribution of every single residue.
 	void calculate_per_aa(result& result, const scoring_function& sf, const receptor& rec, vector<bool>& mask) const;

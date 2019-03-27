@@ -245,12 +245,12 @@ int main(int argc, char* argv[])
 	// Output headers to the standard output and the log file.
 	const char separator = '|';
 	cout << "Creating grid maps of " << granularity << " A and running " << num_tasks << " Monte Carlo searches per ligand" << endl;
-	cout              << setw( 8) << "Index"
-		 << separator << setw(16) << "Ligand"
-		 << separator << setw( 8) << "Atoms" 
-		 << separator << setw( 8) << "Torsions"
-		 << separator << setw( 6) << "nConfs"
-		 << separator << setw(22) << "idock score (kcal/mol)";
+	cout             << setw( 8) << "Index"
+		<< separator << setw(16) << "Ligand"
+		<< separator << setw( 8) << "Atoms"
+		<< separator << setw( 8) << "Torsions"
+		<< separator << setw( 6) << "nConfs"
+		<< separator << setw(22) << "idock score (kcal/mol)";
 	if (with_rf_score)
 		cout << separator << setw(14) << "RF-Score (pKd)";
 	cout << endl << setprecision(2);
@@ -409,7 +409,7 @@ int main(int argc, char* argv[])
 			if (num_confs)
 			{
 				// Write models to file.
-				lig.write_models(output_ligand_path, results, rec);
+				lig.write_models(output_ligand_path, results, rec, score_only || both_score_dock);
 
 				// Output per-amino-acid energy for all conformations.
 				ofstream rep(out_path / (stem + ".csv"));

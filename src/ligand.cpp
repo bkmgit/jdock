@@ -27,6 +27,19 @@ ligand::ligand(const path& p, array<double, 3>& origin)
 	string line;
 
 	// Start parsing.
+	// To prepare pdbqt for ligand, please use vega. With prepare_ligand4.py, some necessary polar hydrogens are missing.
+	// With OpenBabel, hydrogens are all treated polar.
+	//
+	// [VEGA ZZ Usage]
+	// vega ligand.pdb -o ligand.pdbqt -f VINA -c Gasteiger -p VINA -l GEN -r APOLAR -j FLEX -w
+	//   -o ligand.pdbqt    write to file with name ligand.pdbqt.
+	//   -f VINA            output AudoDock Vina pdbqt format.
+	//   -c Gasteiger       charge
+	//   -p VINA            assign atom types using the AutoDock Vina force field (based on AMBER) template.
+	//   -l GEN             add hydrogens with generic organic molecule.
+	//   -r APOLAR          remove non-polar hydrogens.
+	//   -j FLEX            output as a flexible molecule with branches.
+	//   -w                 remove water.
 	for (ifstream ifs(p); getline(ifs, line);)
 	{
 		const string record = line.substr(0, 6);
@@ -538,7 +551,7 @@ double ligand::calculate_rf_score(const result& r, const receptor& rec, const fo
 	return f(x);
 }
 
-void ligand::write_models(const path& output_ligand_path, const vector<result>& results, const receptor& rec) const
+void ligand::write_models(const path& output_ligand_path, const vector<result>& results, const receptor& rec, bool has_input_conf) const
 {
 	const size_t num_results = results.size();
 	assert(num_results);
@@ -549,8 +562,10 @@ void ligand::write_models(const path& output_ligand_path, const vector<result>& 
 	for (size_t k = 0; k < num_results; ++k)
 	{
 		const result& r = results[k];
-		ofs << "MODEL     " << setw(4) << (k + 1) << '\n' << setprecision(2)
-			<< "REMARK 921   NORMALIZED FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.e_nd    << " KCAL/MOL\n"
+		ofs << "MODEL     " << setw(4) << (k + 1) << '\n' << setprecision(2);
+		if (has_input_conf && k == 0)
+			ofs << "REMARK THIS MODEL IS FROM INPUT LIGAND RATHER THAN FROM DOCKING RESULT\n";
+		ofs << "REMARK 921   NORMALIZED FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.e_nd    << " KCAL/MOL\n"
 			<< "REMARK 922        TOTAL FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.e       << " KCAL/MOL\n"
 			<< "REMARK 923 INTER-LIGAND FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.f       << " KCAL/MOL\n"
 			<< "REMARK 924 INTRA-LIGAND FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << (r.e - r.f) << " KCAL/MOL\n"
