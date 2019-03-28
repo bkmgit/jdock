@@ -422,11 +422,9 @@ int main(int argc, char* argv[])
 					lig.calculate_per_aa(results[i], sf, rec, mask);
 					if (score_only || both_score_dock)
 					{
-						rep << ',';
+						rep << ",Conf " << i + 1;
 						if (i == 0)
-							rep << "Conf Input";
-						else
-							rep << "Conf " << i;
+							rep << "(Input)";
 					}
 					else
 					{
