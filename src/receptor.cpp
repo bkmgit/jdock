@@ -45,7 +45,7 @@ receptor::receptor(const path& p, const array<double, 3>& center, const array<do
 	// vega receptor.pdb -o receptor.pdbqt -f VINA -c Gasteiger -p VINA -l GEN -r APOLAR -w
 	//   -o receptor.pdbqt  write to file with name receptor.pdbqt.
 	//   -f VINA            output AudoDock Vina pdbqt format.
-	//   -c Gasteiger       charge
+	//   -c Gasteiger       add Gasteiger-Marsili empirical atomic partial charges.
 	//   -p VINA            assign atom types using the AutoDock Vina force field (based on AMBER) template.
 	//   -l GEN             add hydrogens with generic organic molecule.
 	//   -r APOLAR          remove non-polar hydrogens.

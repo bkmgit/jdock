@@ -34,7 +34,7 @@ ligand::ligand(const path& p, array<double, 3>& origin)
 	// vega ligand.pdb -o ligand.pdbqt -f VINA -c Gasteiger -p VINA -l GEN -r APOLAR -j FLEX -w
 	//   -o ligand.pdbqt    write to file with name ligand.pdbqt.
 	//   -f VINA            output AudoDock Vina pdbqt format.
-	//   -c Gasteiger       charge
+	//   -c Gasteiger       add Gasteiger-Marsili empirical atomic partial charges.
 	//   -p VINA            assign atom types using the AutoDock Vina force field (based on AMBER) template.
 	//   -l GEN             add hydrogens with generic organic molecule.
 	//   -r APOLAR          remove non-polar hydrogens.
