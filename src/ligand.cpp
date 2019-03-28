@@ -575,9 +575,9 @@ void ligand::write_models(const path& output_ligand_path, const vector<result>& 
 		size_t hydrogen = 0;
 		for (const auto& line : lines)
 		{
-			if (line.size() >= 79) // This line starts with "ATOM" or "HETATM".
+			if (line.size() >= 78) // This line starts with "ATOM" or "HETATM".
 			{
-				const bool is_hydrogen = line[77] == 'H' && (line[78] == ' ' || line[78] == 'D');
+				const bool is_hydrogen = line[77] == 'H' && (line.length() == 78 || line[78] == ' ' || line[78] == 'D');
 				const double free_energy = is_hydrogen ? 0 : rec.maps[heavy_atoms[heavy_atom].xs][rec.index(rec.index(r.heavy_atoms[heavy_atom]))];
 				const array<double, 3>& coordinate = is_hydrogen ? r.hydrogens[hydrogen++] : r.heavy_atoms[heavy_atom++];
 				ofs << line.substr(0, 30)
@@ -586,7 +586,7 @@ void ligand::write_models(const path& output_ligand_path, const vector<result>& 
 					<< setw(8) << coordinate[2]
 					<< line.substr(54, 16)
 					<< setw(6) << free_energy
-					<< line.substr(76);
+					<< setw(4) << left << line.substr(76) << right;
 			}
 			else // This line starts with "ROOT", "ENDROOT", "BRANCH", "ENDBRANCH", TORSDOF", which will not change during docking.
 			{
