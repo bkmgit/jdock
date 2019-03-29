@@ -8,6 +8,20 @@
 #include "residue.hpp"
 #include "receptor.hpp"
 
+receptor::receptor(const path& p)
+	: center()
+	, size()
+	, corner0()
+	, corner1()
+	, granularity()
+	, granularity_inverse()
+	, num_probes()
+	, num_probes_product()
+	, precise_mode(true)
+{
+	parse_pdbqt(p);
+}
+
 receptor::receptor(const path& p, const array<double, 3>& center, const array<double, 3>& size, const double granularity)
 	: center(center)
 	, size(size)
@@ -20,12 +34,18 @@ receptor::receptor(const path& p, const array<double, 3>& center, const array<do
 	, p_offset(scoring_function::n)
 	, maps(scoring_function::n)
 	, donors(num_probes_product)
+	, precise_mode(false)
+{
+	for (auto& donor : donors)
+		donor.reserve(50); // A grid typically receives contribution from <= 50 receptor atoms.
+	parse_pdbqt(p);
+}
+
+void receptor::parse_pdbqt(const path& p)
 {
 	// Initialize necessary variables for constructing a receptor.
 	atoms.reserve(5000); // A receptor typically consists of <= 5,000 atoms.
 	residues.reserve(1000); // A receptor typically consists of <= 1,000 residues.
-	for (auto& donor : donors)
-		donor.reserve(50); // A grid typically receives contribution from <= 50 receptor atoms.
 
 	// Initialize helper variables for parsing.
 	string residue_seq = "XXXX"; // Current residue sequence, used to track residue change, initialized to a dummy value.
@@ -150,24 +170,31 @@ receptor::receptor(const path& p, const array<double, 3>& center, const array<do
 				}
 			}
 
-			// Save the atom if and only if its distance to its projection point on the box is within cutoff.
-			double r2 = 0;
-			for (size_t i = 0; i < 3; ++i)
-			{
-				if (a.coord[i] < corner0[i])
-				{
-					const double d = a.coord[i] - corner0[i];
-					r2 += d * d;
-				}
-				else if (a.coord[i] > corner1[i])
-				{
-					const double d = a.coord[i] - corner1[i];
-					r2 += d * d;
-				}
-			}
-			if (r2 < scoring_function::cutoff_sqr)
+			if (precise_mode)
 			{
 				atoms.push_back(move(a));
+			}
+			else
+			{
+				// Save the atom if and only if its distance to its projection point on the box is within cutoff.
+				double r2 = 0;
+				for (size_t i = 0; i < 3; ++i)
+				{
+					if (a.coord[i] < corner0[i])
+					{
+						const double d = a.coord[i] - corner0[i];
+						r2 += d * d;
+					}
+					else if (a.coord[i] > corner1[i])
+					{
+						const double d = a.coord[i] - corner1[i];
+						r2 += d * d;
+					}
+				}
+				if (r2 < scoring_function::cutoff_sqr)
+				{
+					atoms.push_back(move(a));
+				}
 			}
 		}
 		else if (record == "TER   ")
@@ -177,15 +204,34 @@ receptor::receptor(const path& p, const array<double, 3>& center, const array<do
 	}
 }
 
+double receptor::e(const size_t xs, const array<double, 3>& coord, const scoring_function& sf) const
+{
+	assert(precise_mode);
+	double e = 0;
+	// Calculate inter-ligand free energy.
+	for (const auto& a : atoms)
+	{
+		const double r2 = norm_sqr(coord - a.coord);
+		if (r2 < scoring_function::cutoff_sqr)
+		{
+			const size_t nsr2 = static_cast<size_t>(sf.ns * r2);
+			e += sf.e[mp(xs, a.xs)][nsr2]; // Aggregate the energy.
+		}
+	}
+	return e;
+}
+
 bool receptor::within(const array<double, 3>& coord) const
 {
+	assert(!precise_mode);
 	return corner0[0] <= coord[0] && coord[0] < corner1[0]
-	    && corner0[1] <= coord[1] && coord[1] < corner1[1]
-	    && corner0[2] <= coord[2] && coord[2] < corner1[2];
+		&& corner0[1] <= coord[1] && coord[1] < corner1[1]
+		&& corner0[2] <= coord[2] && coord[2] < corner1[2];
 }
 
 array<size_t, 3> receptor::index(const array<double, 3>& coord) const
 {
+	assert(!precise_mode);
 	return
 	{{
 		static_cast<size_t>((coord[0] - corner0[0]) * granularity_inverse),
@@ -196,11 +242,13 @@ array<size_t, 3> receptor::index(const array<double, 3>& coord) const
 
 size_t receptor::index(const array<size_t, 3>& idx) const
 {
+	assert(!precise_mode);
 	return num_probes[0] * (num_probes[1] * idx[2] + idx[1]) + idx[0];
 }
 
 array<size_t, 3> receptor::coord(const size_t index) const
 {
+	assert(!precise_mode);
 	return
 	{{
 		index % num_probes[0],
@@ -211,6 +259,7 @@ array<size_t, 3> receptor::coord(const size_t index) const
 
 array<double, 3> receptor::coord(const array<size_t, 3>& index) const
 {
+	assert(!precise_mode);
 	return
 	{{
 		index[0] * granularity + corner0[0],
@@ -221,6 +270,7 @@ array<double, 3> receptor::coord(const array<size_t, 3>& index) const
 
 void receptor::precalculate(const vector<size_t>& xs)
 {
+	assert(!precise_mode);
 	const size_t nxs = xs.size();
 	for (size_t t0 = 0; t0 < scoring_function::n; ++t0)
 	{
@@ -236,6 +286,7 @@ void receptor::precalculate(const vector<size_t>& xs)
 
 void receptor::populate(const vector<size_t>& xs, const size_t z, const scoring_function& sf)
 {
+	assert(!precise_mode);
 	const size_t n = xs.size();
 	const double z_coord = corner0[2] + granularity * z;
 	const size_t z_offset = num_probes[0] * num_probes[1] * z;
