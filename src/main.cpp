@@ -15,7 +15,7 @@ int main(int argc, char* argv[])
 	array<double, 3> center, size;
 	size_t seed, num_threads, num_trees, num_tasks, max_conformations;
 	double granularity;
-	bool score_only, both_score_dock, with_rf_score;
+	bool score_only, both_score_dock, with_rf_score, precise_mode;
 
 	// Process program options.
 	try
@@ -36,12 +36,12 @@ int main(int argc, char* argv[])
 		input_options.add_options()
 			("receptor", value<path>(&receptor_path)->required(), "receptor in PDBQT format")
 			("ligand", value<path>(&ligand_path)->required(), "ligand or folder of ligands in PDBQT format")
-			("center_x", value<double>(&center[0])->required(), "x coordinate of the search space center")
-			("center_y", value<double>(&center[1])->required(), "y coordinate of the search space center")
-			("center_z", value<double>(&center[2])->required(), "z coordinate of the search space center")
-			("size_x", value<double>(&size[0])->required(), "size in the x dimension in Angstrom")
-			("size_y", value<double>(&size[1])->required(), "size in the y dimension in Angstrom")
-			("size_z", value<double>(&size[2])->required(), "size in the z dimension in Angstrom")
+			("center_x", value<double>(&center[0]), "x coordinate of the search space center, not required if both --score_only and --precise_mode are on")
+			("center_y", value<double>(&center[1]), "y coordinate of the search space center, not required if both --score_only and --precise_mode are on")
+			("center_z", value<double>(&center[2]), "z coordinate of the search space center, not required if both --score_only and --precise_mode are on")
+			("size_x", value<double>(&size[0]), "size in the x dimension in Angstrom, not required if both --score_only and --precise_mode are on")
+			("size_y", value<double>(&size[1]), "size in the y dimension in Angstrom, not required if both --score_only and --precise_mode are on")
+			("size_z", value<double>(&size[2]), "size in the z dimension in Angstrom, not required if both --score_only and --precise_mode are on")
 			;
 		options_description output_options("output (optional)");
 		output_options.add_options()
@@ -51,13 +51,14 @@ int main(int argc, char* argv[])
 		miscellaneous_options.add_options()
 			("seed", value<size_t>(&seed)->default_value(default_seed), "explicit non-negative random seed")
 			("threads", value<size_t>(&num_threads)->default_value(default_num_threads), "number of worker threads to use")
-			("trees", value<size_t>(&num_trees)->default_value(default_num_trees), "number of decision trees in random forest")
+			("trees", value<size_t>(&num_trees)->default_value(default_num_trees), "number of decision trees in random forest, no effect without --rf_score")
 			("tasks", value<size_t>(&num_tasks)->default_value(default_num_tasks), "number of Monte Carlo tasks for global search")
 			("conformations", value<size_t>(&max_conformations)->default_value(default_max_conformations), "maximum number of binding conformations to write")
 			("granularity", value<double>(&granularity)->default_value(default_granularity), "density of probe atoms of grid maps")
 			("score_only", bool_switch(&score_only), "scoring input ligand conformation without docking, this option conflicts with --score_dock")
 			("score_dock", bool_switch(&both_score_dock), "scoring input ligand conformation as well as docking, this option conflicts with --score_only")
 			("rf_score", bool_switch(&with_rf_score), "compute RF-Score as well")
+			("precise_mode", bool_switch(&precise_mode), "precise mode in which no precalculated energy grid map is used")
 			("help", "this help information")
 			("version", "version information")
 			("config", value<path>(), "configuration file to load options from")
@@ -92,6 +93,20 @@ int main(int argc, char* argv[])
 
 		// Notify the user of parsing errors, if any.
 		vm.notify();
+
+		// Validate size and center.
+		if (!score_only || !precise_mode)
+		{
+			const string required_options[] = { "center_x", "center_y", "center_z", "size_x", "size_y", "size_z" };
+			for (const auto& opt : required_options)
+			{
+				if (!vm.count(opt))
+				{
+					cerr << "the option '--" << opt << "' is required but missing" << endl;
+					return 1;
+				}
+			}
+		}
 
 		// Validate receptor_path.
 		if (!exists(receptor_path))
@@ -165,7 +180,7 @@ int main(int argc, char* argv[])
 
 	// Parse the receptor.
 	cout << "Parsing the receptor " << receptor_path << endl;
-	receptor rec(receptor_path, center, size, granularity);
+	receptor rec = precise_mode ? receptor(receptor_path) : receptor(receptor_path, center, size, granularity);
 	cout << "Found " << rec.atoms.size() << " atoms in " << rec.residues.size() << " residues in receptor " << receptor_path << endl;
 
 	// Reserve storage for result containers.
@@ -309,36 +324,42 @@ int main(int argc, char* argv[])
 		}
 		else
 		{
-			// Find atom types that are present in the current ligand but not present in the grid maps.
-			vector<size_t> xs;
-			for (size_t t = 0; t < sf.n; ++t)
+			// Non precise mode uses grid maps.
+			if (!precise_mode)
 			{
-				if (lig.xs[t] && rec.maps[t].empty())
+				// Find atom types that are present in the current ligand but not present in the grid maps.
+				vector<size_t> xs;
+				for (size_t t = 0; t < sf.n; ++t)
 				{
-					rec.maps[t].resize(rec.num_probes_product);
-					xs.push_back(t);
-				}
-			}
-
-			// Create grid maps on the fly if necessary.
-			if (xs.size())
-			{
-				// Precalculate p_offset.
-				rec.precalculate(xs);
-
-				// Populate the grid map task container.
-				cnt.init(rec.num_probes[2]);
-				for (size_t z = 0; z < rec.num_probes[2]; ++z)
-				{
-					io.post([&, z]()
+					if (lig.xs[t] && rec.init_e(t))
 					{
-						rec.populate(xs, z, sf);
-						cnt.increment();
-					});
+						xs.push_back(t);
+					}
 				}
-				cnt.wait();
+
+				// Create grid maps on the fly if necessary.
+				if (xs.size())
+				{
+					// Precalculate p_offset.
+					rec.precalculate(xs);
+
+					// Populate the grid map task container.
+					cnt.init(rec.num_probes[2]);
+					for (size_t z = 0; z < rec.num_probes[2]; ++z)
+					{
+						io.post([&, z]()
+						{
+							rec.populate(xs, z, sf);
+							cnt.increment();
+						});
+					}
+					cnt.wait();
+				}
 			}
 
+			vector<bool> mask(rec.residues.size());
+
+			// To dock, search conformations.
 			if (!score_only)
 			{
 				// Run the Monte Carlo tasks.
@@ -380,56 +401,68 @@ int main(int argc, char* argv[])
 						{
 							result.rf = lig.calculate_rf_score(result, rec, f);
 						}
+						// Result from compose_result is not complete and need to be completed.
+						lig.calculate_by_comp(result, sf, rec, mask);
 					}
 					id_score = best_result.e_nd;
 					rf_score = best_result.rf;
 				}
 			}
 
+			// To run scoring against input ligand.
 			if (score_only || both_score_dock)
 			{
 				++num_confs;
-				conformation c0(lig.num_active_torsions);
-				c0.position = origin;
-				double e0, f0;
-				change g0(0);
-				lig.evaluate(c0, sf, rec, -99, e0, f0, g0);
-				auto r0 = lig.compose_result(e0, f0, c0);
-				r0.e_nd = r0.f * lig.flexibility_penalty_factor;
-				if (with_rf_score)
+				if (precise_mode)
 				{
-					r0.rf = lig.calculate_rf_score(r0, rec, f);
+					// The returned result is complete with per residue/heavy_atom energy.
+					auto r0 = lig.complete_result_noconf(origin, sf, rec, mask);
+					r0.e_nd = r0.f * lig.flexibility_penalty_factor;
+					if (with_rf_score)
+					{
+						r0.rf = lig.calculate_rf_score(r0, rec, f);
+					}
+					id_score = r0.e_nd;
+					rf_score = r0.rf;
+					results.insert(results.begin(), move(r0));
 				}
-				id_score = r0.e_nd;
-				rf_score = r0.rf;
-				results.insert(results.begin(), move(r0));
+				else
+				{
+					conformation c0(lig.num_active_torsions);
+					c0.position = origin;
+					double e0, f0;
+					change g0(0);
+					lig.evaluate(c0, sf, rec, -99, e0, f0, g0);
+					auto r0 = lig.compose_result(e0, f0, c0, false);
+					r0.e_nd = r0.f * lig.flexibility_penalty_factor;
+					if (with_rf_score)
+					{
+						r0.rf = lig.calculate_rf_score(r0, rec, f);
+					}
+					// Result from compose_result is not complete and need to be completed.
+					lig.calculate_by_comp(r0, sf, rec, mask);
+					id_score = r0.e_nd;
+					rf_score = r0.rf;
+					results.insert(results.begin(), move(r0));
+				}
 			}
 
 			// If conformations are found, output them.
 			if (num_confs)
 			{
 				// Write models to file.
-				lig.write_models(output_ligand_path, results, rec, score_only || both_score_dock);
+				lig.write_models(output_ligand_path, results, rec);
 
-				// Output per-amino-acid energy for all conformations.
+				// Output per residue energy for all conformations.
 				ofstream rep(out_path / (stem + ".csv"));
 				rep.setf(ios::fixed, ios::floatfield);
 				rep << "Chain ID,Residue name,Residue sequence";
 
-				vector<bool> mask(rec.residues.size());
 				for (size_t i = 0; i < num_confs; ++i)
 				{
-					lig.calculate_per_aa(results[i], sf, rec, mask);
-					if (score_only || both_score_dock)
-					{
-						rep << ",Conf " << i + 1;
-						if (i == 0)
-							rep << "(Input)";
-					}
-					else
-					{
-						rep << ',' << "Conf " << (i + 1);
-					}
+					rep << ",Conf " << i + 1;
+					if (!results[i].from_docking)
+						rep << "(Input)";
 				}
 				rep << endl << setprecision(3);
 
@@ -444,8 +477,8 @@ int main(int argc, char* argv[])
 					for (size_t i = 0; i < num_confs; ++i)
 					{
 						rep << ',';
-						if (results[i].e_aa[k] != 0.0)
-							rep << results[i].e_aa[k];
+						if (results[i].e_residues[k] != 0.0)
+							rep << results[i].e_residues[k];
 					}
 
 					rep << endl;

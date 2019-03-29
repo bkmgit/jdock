@@ -204,23 +204,6 @@ void receptor::parse_pdbqt(const path& p)
 	}
 }
 
-double receptor::e(const size_t xs, const array<double, 3>& coord, const scoring_function& sf) const
-{
-	assert(precise_mode);
-	double e = 0;
-	// Calculate inter-ligand free energy.
-	for (const auto& a : atoms)
-	{
-		const double r2 = norm_sqr(coord - a.coord);
-		if (r2 < scoring_function::cutoff_sqr)
-		{
-			const size_t nsr2 = static_cast<size_t>(sf.ns * r2);
-			e += sf.e[mp(xs, a.xs)][nsr2]; // Aggregate the energy.
-		}
-	}
-	return e;
-}
-
 bool receptor::within(const array<double, 3>& coord) const
 {
 	assert(!precise_mode);

@@ -26,12 +26,8 @@ public:
 	const array<size_t, 3> num_probes; //!< Number of probes.
 	const size_t num_probes_product; //!< Product of num_probes[0,1,2].
 	vector<atom> atoms; //!< Receptor atoms.
-	vector<vector<double>> maps; //!< Grid maps.
 	vector<vector<uint16_t>> donors; //!< Indicies of atoms of which contribute to a box grid. The number of atoms is typically less than 65536.
 	vector<residue> residues; //!< Receptor residues.
-
-	//! Returns free energy for the given atom type and atom coordinate in precise mode.
-	double e(const size_t xs, const array<double, 3>& coord, const scoring_function& sf) const;
 
 	//! Returns free energy for the given atom type and atom coordinate using grid maps.
 	inline double e(const size_t xs, const array<double, 3>& coord) const
@@ -45,6 +41,15 @@ public:
 		assert(!precise_mode);
 		assert(maps[xs].size());
 		return maps[xs][index(coord)];
+	}
+
+	//! Performs an initialization for the given atom type and returns true if an initialization has been performed.
+	inline bool init_e(const size_t xs)
+	{
+		if (!maps[xs].empty())
+			return false;
+		maps[xs].resize(num_probes_product);
+		return true;
 	}
 
 	//! Returns true if a coordinate is within current half-open-half-close box, i.e. [corner0, corner1).
@@ -72,6 +77,7 @@ private:
 	const array<double, 3> center; //!< Box center.
 	const array<double, 3> size; //!< 3D sizes of box.
 	vector<vector<size_t>> p_offset; //!< Auxiliary precalculated constants to accelerate grid map creation.
+	vector<vector<double>> maps; //!< Grid maps.
 
 	void parse_pdbqt(const path& p);
 };

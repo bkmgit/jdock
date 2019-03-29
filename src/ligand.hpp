@@ -57,16 +57,19 @@ public:
 	//! Evaluates free energy e, force f, and change g. Returns true if the conformation is accepted.
 	bool evaluate(const conformation& conf, const scoring_function& sf, const receptor& rec, const double e_upper_bound, double& e, double& f, change& g) const;
 
-	//! Composes a result from free energy, inter-molecular free energy f, and conformation conf.
-	result compose_result(const double e, const double f, const conformation& conf) const;
+	//! Returns a result with free energy e and force f being per-residuely evaluated from the original ligand without a conformation. This is a short-circuited version indenpendent on receptor grid maps.
+	result complete_result_noconf(const array<double, 3>& origin, const scoring_function& sf, const receptor& rec, vector<bool>& mask) const;
+
+	//! Composes a partial result from free energy, inter-molecular free energy f, and conformation conf but without per residue contributions.
+	result compose_result(const double e, const double f, const conformation& conf, bool from_docking) const;
 
 	double calculate_rf_score(const result& r, const receptor& rec, const forest& f) const;
 
 	//! Writes a given number of conformations from a result container into a output ligand file in PDBQT format.
-	void write_models(const path& output_ligand_path, const vector<result>& results, const receptor& rec, bool has_input_conf) const;
+	void write_models(const path& output_ligand_path, const vector<result>& results, const receptor& rec) const;
 
 	//! Revisit a result and calculate inter-molecular free energy contribution of every single residue.
-	void calculate_per_aa(result& result, const scoring_function& sf, const receptor& rec, vector<bool>& mask) const;
+	void calculate_by_comp(result& result, const scoring_function& sf, const receptor& rec, vector<bool>& mask) const;
 
 	void monte_carlo(vector<result>& results, const size_t seed, const scoring_function& sf, const receptor& rec) const;
 

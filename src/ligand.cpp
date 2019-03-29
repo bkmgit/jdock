@@ -296,8 +296,97 @@ ligand::ligand(const path& p, array<double, 3>& origin)
 	}
 }
 
+result ligand::complete_result_noconf(const array<double, 3>& origin, const scoring_function& sf, const receptor& rec, vector<bool>& mask) const
+{
+	assert(rec.precise_mode);
+
+	// Initialize origin coordinate, which is rotorY.
+	vector<array<double, 3>> orig(num_frames);
+
+	// Initialize heavy atom and hydrogen coordinates.
+	vector<array<double, 3>> heavy_atoms(num_heavy_atoms);
+	vector<array<double, 3>> hydrogens(num_hydrogens);
+
+	// Calculate the coor of both heavy atoms and hydrogens of ROOT frame.
+	const frame& root = frames.front();
+	orig.front() = origin;
+
+	for (size_t i = root.habegin; i < root.haend; ++i)
+	{
+		heavy_atoms[i] = orig.front() + this->heavy_atoms[i].coord;
+	}
+	for (size_t i = root.hybegin; i < root.hyend; ++i)
+	{
+		hydrogens[i] = orig.front() + this->hydrogens[i].coord;
+	}
+
+	// Calculate the coor of both heavy atoms and hydrogens of BRANCH frames.
+	for (size_t k = 1, t = 0; k < num_frames; ++k)
+	{
+		const frame& f = frames[k];
+
+		// Update origin.
+		orig[k] = orig[f.parent] + f.parent_rotorY_to_current_rotorY;
+
+		// Update coor.
+		for (size_t i = f.habegin; i < f.haend; ++i)
+		{
+			heavy_atoms[i] = orig[k] + this->heavy_atoms[i].coord;
+		}
+		for (size_t i = f.hybegin; i < f.hyend; ++i)
+		{
+			hydrogens[i] = orig[k] + this->hydrogens[i].coord;
+		}
+	}
+
+	double e = 0;
+	vector<double> e_residues(rec.residues.size());
+	assert(mask.size() == rec.residues.size());
+	vector<double> e_heavy_atoms(num_heavy_atoms);
+
+	// Calculate inter-ligand free energy.
+	for (size_t i = 0; i < num_heavy_atoms; ++i)
+	{
+		const size_t xs = this->heavy_atoms[i].xs;
+		const auto& coord = heavy_atoms[i];
+
+		for (const auto& a : rec.atoms)
+		{
+			const double r2 = norm_sqr(coord - a.coord);
+			if (r2 < scoring_function::cutoff_sqr)
+			{
+				const size_t nsr2 = static_cast<size_t>(sf.ns * r2);
+				const double e0 = sf.e[mp(xs, a.xs)][nsr2];
+				
+				// Aggregate the energy.
+				e += e0; // Total energy.
+				e_residues[a.residue] += e0; // Per residue energy.
+				e_heavy_atoms[i] += e0; // Per ligand atom energy.
+				mask[a.residue] = true; // Mark contributing residue.
+			}
+		}
+	}
+
+	// Save inter-molecular free energy into f.
+	double f = e;
+
+	// Calculate intra-ligand free energy.
+	for (const auto &p : interacting_pairs)
+	{
+		const double r2 = norm_sqr(heavy_atoms[p.i1] - heavy_atoms[p.i0]);
+		if (r2 < scoring_function::cutoff_sqr)
+		{
+			const size_t nsr2 = static_cast<size_t>(sf.ns * r2);
+			e += sf.e[p.p_offset][nsr2];
+		}
+	}
+
+	return result(e, f, false, move(heavy_atoms), move(hydrogens), move(e_heavy_atoms), move(e_residues));
+}
+
 bool ligand::evaluate(const conformation& conf, const scoring_function& sf, const receptor& rec, const double e_upper_bound, double& e, double& f, change& g) const
 {
+	assert(!rec.precise_mode);
 	if (!rec.within(conf.position))
 		return false;
 
@@ -382,9 +471,7 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 	e = 0;
 	for (size_t i = 0; i < num_heavy_atoms; ++i)
 	{
-		// Retrieve the grid map in need.
-		const vector<double>& map = rec.maps[heavy_atoms[i].xs];
-		assert(map.size());
+		const size_t xs = heavy_atoms[i].xs;
 
 		// Find the index and fraction of the current coor.
 		const auto index = rec.index(coor[i]);
@@ -398,12 +485,12 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 		const size_t x0 = index[0];
 		const size_t y0 = index[1];
 		const size_t z0 = index[2];
-		const double e000 = map[rec.index(array<size_t, 3>{{x0, y0, z0}})];
+		const double e000 = rec.e(xs, array<size_t, 3>{{x0    , y0    , z0    }});
 
 		// The derivative of probe atoms can be precalculated at the cost of massive memory storage.
-		const double e100 = map[rec.index(array<size_t, 3>{{x0 + 1, y0    , z0    }})];
-		const double e010 = map[rec.index(array<size_t, 3>{{x0    , y0 + 1, z0    }})];
-		const double e001 = map[rec.index(array<size_t, 3>{{x0    , y0    , z0 + 1}})];
+		const double e100 = rec.e(xs, array<size_t, 3>{{x0 + 1, y0    , z0    }});
+		const double e010 = rec.e(xs, array<size_t, 3>{{x0    , y0 + 1, z0    }});
+		const double e001 = rec.e(xs, array<size_t, 3>{{x0    , y0    , z0 + 1}});
 		deri[i][0] = (e100 - e000) * rec.granularity_inverse;
 		deri[i][1] = (e010 - e000) * rec.granularity_inverse;
 		deri[i][2] = (e001 - e000) * rec.granularity_inverse;
@@ -477,7 +564,7 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 	return true;
 }
 
-result ligand::compose_result(const double e, const double f, const conformation& conf) const
+result ligand::compose_result(const double e, const double f, const conformation& conf, bool from_docking) const
 {
 	vector<array<double, 3>> orig(num_frames);
 	vector<array<double, 4>> oriq(num_frames);
@@ -523,7 +610,7 @@ result ligand::compose_result(const double e, const double f, const conformation
 		}
 	}
 
-	return result(e, f, move(heavy_atoms), move(hydrogens));
+	return result(e, f, from_docking, move(heavy_atoms), move(hydrogens));
 }
 
 double ligand::calculate_rf_score(const result& r, const receptor& rec, const forest& f) const
@@ -551,7 +638,7 @@ double ligand::calculate_rf_score(const result& r, const receptor& rec, const fo
 	return f(x);
 }
 
-void ligand::write_models(const path& output_ligand_path, const vector<result>& results, const receptor& rec, bool has_input_conf) const
+void ligand::write_models(const path& output_ligand_path, const vector<result>& results, const receptor& rec) const
 {
 	const size_t num_results = results.size();
 	assert(num_results);
@@ -562,14 +649,14 @@ void ligand::write_models(const path& output_ligand_path, const vector<result>& 
 	for (size_t k = 0; k < num_results; ++k)
 	{
 		const result& r = results[k];
-		ofs << "MODEL     " << setw(4) << (k + 1) << '\n' << setprecision(2);
-		if (has_input_conf && k == 0)
-			ofs << "REMARK THIS MODEL IS FROM INPUT LIGAND RATHER THAN FROM DOCKING RESULT\n";
-		ofs << "REMARK 921   NORMALIZED FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.e_nd    << " KCAL/MOL\n"
-			<< "REMARK 922        TOTAL FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.e       << " KCAL/MOL\n"
-			<< "REMARK 923 INTER-LIGAND FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.f       << " KCAL/MOL\n"
-			<< "REMARK 924 INTRA-LIGAND FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << (r.e - r.f) << " KCAL/MOL\n"
-			<< "REMARK 927      BINDING AFFINITY PREDICTED BY RF-SCORE:" << setw(8) << r.rf      << " PKD\n" << setprecision(3);
+		ofs << "MODEL     " << setw(4) << (k + 1) << endl << setprecision(2);
+		if (!r.from_docking)
+			ofs << "REMARK THIS MODEL IS IDENTICAL TO THE INPUT LIGAND AND NOT FROM DOCKING" << endl;
+		ofs << "REMARK 921   NORMALIZED FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.e_nd      << " KCAL/MOL" << endl
+			<< "REMARK 922        TOTAL FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.e         << " KCAL/MOL" << endl
+			<< "REMARK 923 INTER-LIGAND FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.f         << " KCAL/MOL" << endl
+			<< "REMARK 924 INTRA-LIGAND FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << (r.e - r.f) << " KCAL/MOL" << endl
+			<< "REMARK 927      BINDING AFFINITY PREDICTED BY RF-SCORE:" << setw(8) << r.rf        << " PKD" << endl << setprecision(3);
 
 		size_t heavy_atom = 0;
 		size_t hydrogen = 0;
@@ -578,7 +665,7 @@ void ligand::write_models(const path& output_ligand_path, const vector<result>& 
 			if (line.size() >= 78) // This line starts with "ATOM" or "HETATM".
 			{
 				const bool is_hydrogen = line[77] == 'H' && (line.length() == 78 || line[78] == ' ' || line[78] == 'D');
-				const double free_energy = is_hydrogen ? 0 : rec.maps[heavy_atoms[heavy_atom].xs][rec.index(rec.index(r.heavy_atoms[heavy_atom]))];
+				const double free_energy = is_hydrogen ? 0 : r.e_heavy_atoms[heavy_atom];
 				const array<double, 3>& coordinate = is_hydrogen ? r.hydrogens[hydrogen++] : r.heavy_atoms[heavy_atom++];
 				ofs << line.substr(0, 30)
 					<< setw(8) << coordinate[0]
@@ -600,15 +687,17 @@ void ligand::write_models(const path& output_ligand_path, const vector<result>& 
 	}
 }
 
-//! Revisit a result and calculate inter-molecular free energy contribution of every single residue.
-void ligand::calculate_per_aa(result& result, const scoring_function& sf, const receptor& rec, vector<bool>& mask) const
+//! Revisit a result and calculate inter-molecular free energy components to every ligand atom and from every receptor residue.
+void ligand::calculate_by_comp(result& result, const scoring_function& sf, const receptor& rec, vector<bool>& mask) const
 {
-	auto& eaa = result.e_aa;
-	assert(eaa.empty());
+	auto &e_residue = result.e_residues, &e_heavy_atoms = result.e_heavy_atoms;
+	assert(e_residue.empty());
+	assert(e_heavy_atoms.empty());
 
-	eaa.resize(rec.residues.size());
+	e_residue.resize(rec.residues.size());
+	e_heavy_atoms.resize(num_heavy_atoms);
 
-	for (size_t k = 0; k < result.heavy_atoms.size(); ++k)
+	for (size_t k = 0; k < num_heavy_atoms; ++k)
 	{
 		const auto& coord = result.heavy_atoms[k];
 		const auto xs = heavy_atoms[k].xs;
@@ -633,7 +722,9 @@ void ligand::calculate_per_aa(result& result, const scoring_function& sf, const 
 			assert(p < sf.np);
 
 			assert(!sf.e[p].empty());
-			eaa[a.residue] += sf.e[p][r_offset]; // Aggregate the energy.
+			const double e0 = sf.e[p][r_offset];
+			e_residue[a.residue] += e0; // Aggregate the energy for the residue the ligand atom locates in.
+			e_heavy_atoms[k] += e0; // Aggregate the energy for the ligand atom.
 
 			// Mark contributing residue.
 			mask[a.residue] = true;
@@ -829,7 +920,7 @@ void ligand::monte_carlo(vector<result>& results, const size_t seed, const scori
 			// e1 will be saved if and only if it is even better than the best one.
 			if (e1 < best_e || results.size() < results.capacity())
 			{
-				result::push(results, compose_result(e1, f1, c1), required_square_error);
+				result::push(results, compose_result(e1, f1, c1, true), required_square_error);
 				if (e1 < best_e) best_e = e0;
 			}
 

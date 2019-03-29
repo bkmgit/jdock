@@ -12,16 +12,27 @@ public:
 	double f; //!< Inter-molecular free energy.
 	double e_nd; //!< Normalized free energy.
 	double rf; //!< RF-Score binding affinity.
+	bool from_docking; //!< Indicates if the result is created from docking.
 	vector<array<double, 3>> heavy_atoms; //!< Heavy atom coordinates.
 	vector<array<double, 3>> hydrogens; //!< Hydrogen atom coordinates.
-	vector<double> e_aa; //!< Per-amino-acid inter-molecular free energy.
+	vector<double> e_heavy_atoms; //!< Per heavy atom inter-molecular free energy.
+	vector<double> e_residues; //!< Per residue inter-molecular free energy.
 
-	//! Constructs a result from free energy e, force f, heavy atom coordinates and hydrogen atom coordinates.
-	explicit result(const double e, const double f, vector<array<double, 3>>&& heavy_atoms_, vector<array<double, 3>>&& hydrogens_)
+	//! Constructs a result from free energy e, force f, whether created from docking, heavy atom coordinates, hydrogen atom coordinates, per heavy atom energy and per residue energy.
+	explicit result(const double e, const double f, bool from_docking, vector<array<double, 3>>&& heavy_atoms, vector<array<double, 3>>&& hydrogens, vector<double>&& e_heavy_atoms, vector<double>&& e_residues)
 		: e(e)
 		, f(f)
-		, heavy_atoms(move(heavy_atoms_))
-		, hydrogens(move(hydrogens_))
+		, from_docking(from_docking)
+		, heavy_atoms(move(heavy_atoms))
+		, hydrogens(move(hydrogens))
+		, e_heavy_atoms(move(e_heavy_atoms))
+		, e_residues(move(e_residues))
+	{
+	}
+
+	//! Constructs a result from free energy e, force f, whether created from docking, heavy atom coordinates and hydrogen atom coordinates.
+	explicit result(const double e, const double f, bool from_docking, vector<array<double, 3>>&& heavy_atoms, vector<array<double, 3>>&& hydrogens)
+		: result(e, f, from_docking, move(heavy_atoms), move(hydrogens), {}, {})
 	{
 	}
 
