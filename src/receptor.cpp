@@ -33,11 +33,8 @@ receptor::receptor(const path& p, const array<double, 3>& center, const array<do
 	, num_probes_product(num_probes[0] * num_probes[1] * num_probes[2])
 	, p_offset(scoring_function::n)
 	, maps(scoring_function::n)
-	, donors(num_probes_product)
 	, precise_mode(false)
 {
-	for (auto& donor : donors)
-		donor.reserve(50); // A grid typically receives contribution from <= 50 receptor atoms.
 	parse_pdbqt(p);
 }
 
@@ -325,8 +322,6 @@ void receptor::populate(const vector<size_t>& xs, const size_t z, const scoring_
 				{
 					maps[xs[i]][zyx_offset] += sf.e[p[i]][r_offset];
 				}
-
-				donors[zyx_offset].push_back(static_cast<uint16_t>(idx));
 			}
 		}
 	}

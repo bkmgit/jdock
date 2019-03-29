@@ -26,7 +26,6 @@ public:
 	const array<size_t, 3> num_probes; //!< Number of probes.
 	const size_t num_probes_product; //!< Product of num_probes[0,1,2].
 	vector<atom> atoms; //!< Receptor atoms.
-	vector<vector<uint16_t>> donors; //!< Indicies of atoms of which contribute to a box grid. The number of atoms is typically less than 65536.
 	vector<residue> residues; //!< Receptor residues.
 
 	//! Returns free energy for the given atom type and atom coordinate using grid maps.

@@ -707,27 +707,27 @@ void ligand::calculate_by_comp(result& result, const scoring_function& sf, const
 		const auto coord_grid = rec.coord(index); // Aligned coordinate.
 
 		// Iterate through all atom ids contributing energy to the grid.
-		for (auto atom_idx : rec.donors[rec.index(index)])
+		for (const auto& a : rec.atoms)
 		{
-			assert(atom_idx < rec.atoms.size());
-
-			const auto& a = rec.atoms[atom_idx];
 			assert(!a.is_hydrogen());
 
 			auto r2 = distance_sqr(a.coord, coord_grid);
-			size_t r_offset = static_cast<size_t>(sf.ns * r2);
-			assert(r_offset < sf.nr);
+			if (r2 < scoring_function::cutoff_sqr)
+			{
+				size_t r_offset = static_cast<size_t>(sf.ns * r2);
+				assert(r_offset < sf.nr);
 
-			size_t p = mp(a.xs, xs);
-			assert(p < sf.np);
+				size_t p = mp(a.xs, xs);
+				assert(p < sf.np);
 
-			assert(!sf.e[p].empty());
-			const double e0 = sf.e[p][r_offset];
-			e_residue[a.residue] += e0; // Aggregate the energy for the residue the ligand atom locates in.
-			e_heavy_atoms[k] += e0; // Aggregate the energy for the ligand atom.
+				assert(!sf.e[p].empty());
+				const double e0 = sf.e[p][r_offset];
+				e_residue[a.residue] += e0; // Aggregate the energy for the residue the ligand atom locates in.
+				e_heavy_atoms[k] += e0; // Aggregate the energy for the ligand atom.
 
-			// Mark contributing residue.
-			mask[a.residue] = true;
+				// Mark contributing residue.
+				mask[a.residue] = true;
+			}
 		}
 	}
 }
