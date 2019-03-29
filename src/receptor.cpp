@@ -17,7 +17,7 @@ receptor::receptor(const path& p)
 	, granularity_inverse()
 	, num_probes()
 	, num_probes_product()
-	, precise_mode(true)
+	, use_maps(false)
 {
 	parse_pdbqt(p);
 }
@@ -33,7 +33,7 @@ receptor::receptor(const path& p, const array<double, 3>& center, const array<do
 	, num_probes_product(num_probes[0] * num_probes[1] * num_probes[2])
 	, p_offset(scoring_function::n)
 	, maps(scoring_function::n)
-	, precise_mode(false)
+	, use_maps(true)
 {
 	parse_pdbqt(p);
 }
@@ -167,7 +167,7 @@ void receptor::parse_pdbqt(const path& p)
 				}
 			}
 
-			if (precise_mode)
+			if (!use_maps)
 			{
 				atoms.push_back(move(a));
 			}
@@ -203,7 +203,7 @@ void receptor::parse_pdbqt(const path& p)
 
 bool receptor::within(const array<double, 3>& coord) const
 {
-	assert(!precise_mode);
+	assert(use_maps);
 	return corner0[0] <= coord[0] && coord[0] < corner1[0]
 		&& corner0[1] <= coord[1] && coord[1] < corner1[1]
 		&& corner0[2] <= coord[2] && coord[2] < corner1[2];
@@ -211,7 +211,7 @@ bool receptor::within(const array<double, 3>& coord) const
 
 array<size_t, 3> receptor::index(const array<double, 3>& coord) const
 {
-	assert(!precise_mode);
+	assert(use_maps);
 	return
 	{{
 		static_cast<size_t>((coord[0] - corner0[0]) * granularity_inverse),
@@ -222,13 +222,13 @@ array<size_t, 3> receptor::index(const array<double, 3>& coord) const
 
 size_t receptor::index(const array<size_t, 3>& idx) const
 {
-	assert(!precise_mode);
+	assert(use_maps);
 	return num_probes[0] * (num_probes[1] * idx[2] + idx[1]) + idx[0];
 }
 
 array<size_t, 3> receptor::coord(const size_t index) const
 {
-	assert(!precise_mode);
+	assert(use_maps);
 	return
 	{{
 		index % num_probes[0],
@@ -239,7 +239,7 @@ array<size_t, 3> receptor::coord(const size_t index) const
 
 array<double, 3> receptor::coord(const array<size_t, 3>& index) const
 {
-	assert(!precise_mode);
+	assert(use_maps);
 	return
 	{{
 		index[0] * granularity + corner0[0],
@@ -250,7 +250,7 @@ array<double, 3> receptor::coord(const array<size_t, 3>& index) const
 
 void receptor::precalculate(const vector<size_t>& xs)
 {
-	assert(!precise_mode);
+	assert(use_maps);
 	const size_t nxs = xs.size();
 	for (size_t t0 = 0; t0 < scoring_function::n; ++t0)
 	{
@@ -266,7 +266,7 @@ void receptor::precalculate(const vector<size_t>& xs)
 
 void receptor::populate(const vector<size_t>& xs, const size_t z, const scoring_function& sf)
 {
-	assert(!precise_mode);
+	assert(use_maps);
 	const size_t n = xs.size();
 	const double z_coord = corner0[2] + granularity * z;
 	const size_t z_offset = num_probes[0] * num_probes[1] * z;

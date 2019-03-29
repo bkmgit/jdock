@@ -296,10 +296,9 @@ ligand::ligand(const path& p, array<double, 3>& origin)
 	}
 }
 
+// This function does not require receptor::use_maps.
 result ligand::complete_result_noconf(const array<double, 3>& origin, const scoring_function& sf, const receptor& rec, vector<bool>& mask) const
 {
-	assert(rec.precise_mode);
-
 	// Initialize origin coordinate, which is rotorY.
 	vector<array<double, 3>> orig(num_frames);
 
@@ -386,7 +385,7 @@ result ligand::complete_result_noconf(const array<double, 3>& origin, const scor
 
 bool ligand::evaluate(const conformation& conf, const scoring_function& sf, const receptor& rec, const double e_upper_bound, double& e, double& f, change& g) const
 {
-	assert(!rec.precise_mode);
+	assert(rec.use_maps);
 	if (!rec.within(conf.position))
 		return false;
 

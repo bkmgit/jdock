@@ -58,7 +58,7 @@ int main(int argc, char* argv[])
 			("score_only", bool_switch(&score_only), "scoring input ligand conformation without docking, this option conflicts with --score_dock")
 			("score_dock", bool_switch(&both_score_dock), "scoring input ligand conformation as well as docking, this option conflicts with --score_only")
 			("rf_score", bool_switch(&with_rf_score), "compute RF-Score as well")
-			("precise_mode", bool_switch(&precise_mode), "precise mode in which no precalculated energy grid map is used")
+			("precise_mode", bool_switch(&precise_mode), "precise mode in which no precalculated energy grid map is used, requires --score_only or --score_dock")
 			("help", "this help information")
 			("version", "version information")
 			("config", value<path>(), "configuration file to load options from")
@@ -171,6 +171,11 @@ int main(int argc, char* argv[])
 			cerr << "Option --score_only and --score_dock cannot be combined" << endl;
 			return 1;
 		}
+		if (precise_mode && !score_only && !both_score_dock)
+		{
+			cerr << "Option --precise_mode must be combined with --score_only or --score_dock" << endl;
+			return 1;
+		}
 	}
 	catch (const exception& e)
 	{
@@ -180,7 +185,7 @@ int main(int argc, char* argv[])
 
 	// Parse the receptor.
 	cout << "Parsing the receptor " << receptor_path << endl;
-	receptor rec = precise_mode ? receptor(receptor_path) : receptor(receptor_path, center, size, granularity);
+	receptor rec = precise_mode && score_only ? receptor(receptor_path) : receptor(receptor_path, center, size, granularity);
 	cout << "Found " << rec.atoms.size() << " atoms in " << rec.residues.size() << " residues in receptor " << receptor_path << endl;
 
 	// Reserve storage for result containers.
@@ -324,8 +329,8 @@ int main(int argc, char* argv[])
 		}
 		else
 		{
-			// Non precise mode uses grid maps.
-			if (!precise_mode)
+			// Precise mode uses grid maps if docking is going to perform as well.
+			if (rec.use_maps)
 			{
 				// Find atom types that are present in the current ligand but not present in the grid maps.
 				vector<size_t> xs;

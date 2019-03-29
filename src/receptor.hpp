@@ -18,7 +18,7 @@ public:
 	//! Constructs a receptor by parsing a receptor file in pdbqt format with a grid map for precalculation being created.
 	explicit receptor(const path& p, const array<double, 3>& center, const array<double, 3>& size, const double granularity);
 
-	const bool precise_mode; //!< Precise mode in which no grid map is used.
+	const bool use_maps; //!< Indicates if grid map precalculation is used.
 	const array<double, 3> corner0; //!< Box boundary corner with smallest values of all the 3 dimensions.
 	const array<double, 3> corner1; //!< Box boundary corner with largest values of all the 3 dimensions.
 	const double granularity; //!< 1D size of grids.
@@ -37,7 +37,7 @@ public:
 	//! Returns free energy for the given atom type and atom index using grid maps.
 	inline double e(const size_t xs, const array<size_t, 3>& coord) const
 	{
-		assert(!precise_mode);
+		assert(use_maps);
 		assert(maps[xs].size());
 		return maps[xs][index(coord)];
 	}
@@ -45,6 +45,7 @@ public:
 	//! Performs an initialization for the given atom type and returns true if an initialization has been performed.
 	inline bool init_e(const size_t xs)
 	{
+		assert(use_maps);
 		if (!maps[xs].empty())
 			return false;
 		maps[xs].resize(num_probes_product);
