@@ -2,8 +2,6 @@
 #ifndef IDOCK_STOPWATCH_HPP
 #define IDOCK_STOPWATCH_HPP
 
-#include <vector>
-#include <array>
 #include <chrono>
 #include <string>
 using namespace std;
@@ -28,16 +26,16 @@ public:
 
 	void reset();
 
-	inline bool is_running();
+	bool is_running() const;
 
 	//! Accumulated elapsed nanoseconds.
-	long long elapsed();
+	long long elapsed() const;
 
 	//! Accumulated elapsed seconds.
-	double elapsed_sec();
+	double elapsed_sec() const;
 
 	//! Accumulated elapsed time in mm:ss.sss format.
-	string elapsed_str();
+	string elapsed_str() const;
 
 private:
 	static const high_resolution_clock clock; //!< A system high resolution clock to query current time.

@@ -44,13 +44,13 @@ void stopwatch::reset()
 	elapsed_ns = 0;
 }
 
-bool stopwatch::is_running()
+bool stopwatch::is_running() const
 {
 	return running;
 }
 
 //! Accumulated elapsed nanoseconds.
-long long stopwatch::elapsed()
+long long stopwatch::elapsed() const
 {
 	if (running)
 		return elapsed_ns + (clock.now() - started_time).count();
@@ -58,13 +58,13 @@ long long stopwatch::elapsed()
 }
 
 //! Accumulated elapsed seconds.
-double stopwatch::elapsed_sec()
+double stopwatch::elapsed_sec() const
 {
 	return elapsed() / 1e9;
 }
 
 //! Accumulated elapsed time in mm:ss.sss format.
-string stopwatch::elapsed_str()
+string stopwatch::elapsed_str() const
 {
 	auto e = elapsed(), sec = e / nanoseconds::period::den;
 	auto fraction = e % nanoseconds::period::den / micro::den;
