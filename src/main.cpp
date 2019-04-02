@@ -15,7 +15,7 @@ int main(int argc, char* argv[])
 	array<double, 3> center, size;
 	size_t seed, num_threads, num_trees, num_tasks, max_conformations;
 	double granularity;
-	bool score_only, both_score_dock, with_rf_score, precise_mode;
+	bool score_only, both_score_dock, with_rf_score, precise_mode, remove_nonstd;
 
 	// Process program options.
 	try
@@ -34,8 +34,8 @@ int main(int argc, char* argv[])
 		using namespace boost::program_options;
 		options_description input_options("input (required)");
 		input_options.add_options()
-			("receptor", value<path>(&receptor_path)->required(), "receptor in PDBQT format")
-			("ligand", value<path>(&ligand_path)->required(), "ligand or folder of ligands in PDBQT format")
+			("receptor", value<path>(&receptor_path)->required(), "receptor file in PDBQT format")
+			("ligand", value<path>(&ligand_path)->required(), "ligand file or folder of ligands in PDBQT format")
 			("center_x", value<double>(&center[0]), "x coordinate of the search space center, not required if both --score_only and --precise_mode are on")
 			("center_y", value<double>(&center[1]), "y coordinate of the search space center, not required if both --score_only and --precise_mode are on")
 			("center_z", value<double>(&center[2]), "z coordinate of the search space center, not required if both --score_only and --precise_mode are on")
@@ -59,6 +59,7 @@ int main(int argc, char* argv[])
 			("score_dock", bool_switch(&both_score_dock), "scoring input ligand conformation as well as docking, this option conflicts with --score_only")
 			("rf_score", bool_switch(&with_rf_score), "compute RF-Score as well")
 			("precise_mode", bool_switch(&precise_mode), "precise mode in which no precalculated energy grid map is used, requires --score_only or --score_dock")
+			("remove_nonstd", bool_switch(&remove_nonstd), "remove non standard residues from receptor")
 			("help", "this help information")
 			("version", "version information")
 			("config", value<path>(), "configuration file to load options from")
@@ -185,7 +186,7 @@ int main(int argc, char* argv[])
 
 	// Parse the receptor.
 	cout << "Parsing the receptor " << receptor_path << endl;
-	receptor rec = precise_mode && score_only ? receptor(receptor_path) : receptor(receptor_path, center, size, granularity);
+	receptor rec = precise_mode && score_only ? receptor(receptor_path, remove_nonstd) : receptor(receptor_path, remove_nonstd, center, size, granularity);
 	cout << "Found " << rec.atoms.size() << " atoms in " << rec.residues.size() << " residues in receptor " << receptor_path << endl;
 
 	// Reserve storage for result containers.

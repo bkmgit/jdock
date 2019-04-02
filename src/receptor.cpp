@@ -8,7 +8,7 @@
 #include "residue.hpp"
 #include "receptor.hpp"
 
-receptor::receptor(const path& p)
+receptor::receptor(const path& p, bool remove_nonstd)
 	: center()
 	, size()
 	, corner0()
@@ -19,10 +19,10 @@ receptor::receptor(const path& p)
 	, num_probes_product()
 	, use_maps(false)
 {
-	parse_pdbqt(p);
+	parse_pdbqt(p, remove_nonstd);
 }
 
-receptor::receptor(const path& p, const array<double, 3>& center, const array<double, 3>& size, const double granularity)
+receptor::receptor(const path& p, bool remove_nonstd, const array<double, 3>& center, const array<double, 3>& size, const double granularity)
 	: center(center)
 	, size(size)
 	, corner0(center - 0.5 * size)
@@ -35,10 +35,10 @@ receptor::receptor(const path& p, const array<double, 3>& center, const array<do
 	, maps(scoring_function::n)
 	, use_maps(true)
 {
-	parse_pdbqt(p);
+	parse_pdbqt(p, remove_nonstd);
 }
 
-void receptor::parse_pdbqt(const path& p)
+void receptor::parse_pdbqt(const path& p, bool remove_nonstd)
 {
 	// Initialize necessary variables for constructing a receptor.
 	atoms.reserve(5000); // A receptor typically consists of <= 5,000 atoms.
@@ -86,15 +86,15 @@ void receptor::parse_pdbqt(const path& p)
 
 				residue res(line);
 
-				// Only amino acid should be stored and contribute energy.
-				if (res.is_amino_acid())
+				// When remove_nonstd is on, only standard amino acids should be stored and contribute energy.
+				if (remove_nonstd && !res.is_amino_acid())
 				{
-					residue_idx = residues.size();
-					residues.push_back(move(res));
+					residue_idx = -1;
 				}
 				else
 				{
-					residue_idx = -1;
+					residue_idx = residues.size();
+					residues.push_back(move(res));
 				}
 			}
 

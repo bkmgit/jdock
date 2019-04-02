@@ -13,10 +13,10 @@ class receptor
 {
 public:
 	//! Constructs a receptor by parsing a receptor file in pdbqt format.
-	explicit receptor(const path& p);
+	explicit receptor(const path& p, bool remove_nonstd);
 
 	//! Constructs a receptor by parsing a receptor file in pdbqt format with a grid map for precalculation being created.
-	explicit receptor(const path& p, const array<double, 3>& center, const array<double, 3>& size, const double granularity);
+	explicit receptor(const path& p, bool remove_nonstd, const array<double, 3>& center, const array<double, 3>& size, const double granularity);
 
 	const bool use_maps; //!< Indicates if grid map precalculation is used.
 	const array<double, 3> corner0; //!< Box boundary corner with smallest values of all the 3 dimensions.
@@ -79,7 +79,7 @@ private:
 	vector<vector<size_t>> p_offset; //!< Auxiliary precalculated constants to accelerate grid map creation.
 	vector<vector<double>> maps; //!< Grid maps.
 
-	void parse_pdbqt(const path& p);
+	void parse_pdbqt(const path& p, bool remove_nonstd);
 };
 
 #endif

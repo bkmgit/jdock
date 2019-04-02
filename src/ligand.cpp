@@ -279,9 +279,9 @@ ligand::ligand(const path& p, array<double, 3>& origin)
 				const frame& f3 = frames[f2.parent];
 				for (size_t j = f2.habegin; j < f2.haend; ++j)
 				{
-					if (k1 == f2.parent && (i == f2.rotorXidx || j == f2.rotorYidx) // The former frame is the parent of the later and either atom is on the connector bond between.
-						|| k1 > 0 && f1.parent == f2.parent && i == f1.rotorYidx && j == f2.rotorYidx // Both atoms are on a connector bond to the same parent frame.
-						|| f2.parent > 0 && k1 == f3.parent && i == f3.rotorXidx && j == f2.rotorYidx // The former frame is the grandparent of the later and both atoms are on their connector bond.
+					if ((k1 == f2.parent && (i == f2.rotorXidx || j == f2.rotorYidx)) // The former frame is the parent of the later and either atom is on the connector bond between.
+						|| (k1 > 0 && f1.parent == f2.parent && i == f1.rotorYidx && j == f2.rotorYidx) // Both atoms are on a connector bond to the same parent frame.
+						|| (f2.parent > 0 && k1 == f3.parent && i == f3.rotorXidx && j == f2.rotorYidx) // The former frame is the grandparent of the later and both atoms are on their connector bond.
 						|| find(neighbors.cbegin(), neighbors.cend(), j) != neighbors.cend()) // The later atom is within 1-4 neighbors of the former.
 					{
 						continue;
@@ -320,7 +320,7 @@ result ligand::complete_result_noconf(const array<double, 3>& origin, const scor
 	}
 
 	// Calculate the coor of both heavy atoms and hydrogens of BRANCH frames.
-	for (size_t k = 1, t = 0; k < num_frames; ++k)
+	for (size_t k = 1; k < num_frames; ++k)
 	{
 		const frame& f = frames[k];
 
