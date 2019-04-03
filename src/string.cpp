@@ -1,7 +1,7 @@
 #include "string.hpp"
 
 //! Remove leading and trailing white spaces from a string.
-string trim(const string&& str)
+string trim(const string& str)
 {
 	size_t i, j;
 	for (i = 0; i < str.size() && isspace(str[i]); ++i);
@@ -11,7 +11,7 @@ string trim(const string&& str)
 }
 
 //! Remove leading white spaces from a string.
-string trim_start(const string&& str)
+string trim_start(const string& str)
 {
 	size_t i;
 	for (i = 0; i < str.size() && isspace(str[i]); ++i);
@@ -20,7 +20,7 @@ string trim_start(const string&& str)
 }
 
 //! Remove trailing white spaces from a string.
-string trim_end(const string&& str)
+string trim_end(const string& str)
 {
 	size_t j;
 	for (j = str.size(); j > 0 && isspace(str[j - 1]); --j);
@@ -29,7 +29,7 @@ string trim_end(const string&& str)
 }
 
 //! Right-aligns the characters by padding them on the left with a specified character, for a specified total length.
-string pad_left(const string&& str, size_t total_width, char padding_char)
+string pad_left(const string& str, size_t total_width, char padding_char)
 {
 	if (total_width <= str.size())
 		return str;
@@ -37,9 +37,31 @@ string pad_left(const string&& str, size_t total_width, char padding_char)
 }
 
 //! Left-aligns the characters by padding them on the right with a specified character, for a specified total length.
-string pad_right(const string&& str, size_t total_width, char padding_char)
+string pad_right(const string& str, size_t total_width, char padding_char)
 {
 	if (total_width <= str.size())
 		return str;
 	return str + string(total_width - str.size(), padding_char);
+}
+
+//! Determines whether the beginning of this string instance matches the specified string.
+bool starts_with(const string& str, const string& value)
+{
+	if (str.size() < value.size())
+		return false;
+	for (auto i1 = value.begin(), i2 = str.begin(); i1 != value.end(); i1++, i2++)
+		if (*i1 != *i2)
+			return false;
+	return true;
+}
+
+//! Determines whether the end of this string instance matches the specified string.
+bool ends_with(const string& str, const string& value)
+{
+	if (str.size() < value.size())
+		return false;
+	for (auto i1 = value.rbegin(), i2 = str.rbegin(); i1 != value.rend(); i1++, i2++)
+		if (*i1 != *i2)
+			return false;
+	return true;
 }
