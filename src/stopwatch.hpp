@@ -38,9 +38,9 @@ public:
 	string elapsed_str() const;
 
 private:
-	static const high_resolution_clock clock; //!< A system high resolution clock to query current time.
+	using clock = high_resolution_clock;
 	size_t elapsed_ns; //!< Accumulated elapsed nanoseconds.
-	time_point<steady_clock> started_time; //!< Started time of the current running.
+	time_point<clock> started_time; //!< Started time of the current running.
 	bool running; //!< Current running status.
 };
 

@@ -20,7 +20,7 @@ void stopwatch::start()
 	if (running)
 		return;
 	running = true;
-	started_time = clock.now();
+	started_time = clock::now();
 }
 
 void stopwatch::stop()
@@ -28,14 +28,14 @@ void stopwatch::stop()
 	if (!running)
 		return;
 	running = false;
-	elapsed_ns += (clock.now() - started_time).count();
+	elapsed_ns += (clock::now() - started_time).count();
 }
 
 void stopwatch::restart()
 {
 	running = true;
 	elapsed_ns = 0;
-	started_time = clock.now();
+	started_time = clock::now();
 }
 
 void stopwatch::reset()
@@ -53,7 +53,7 @@ bool stopwatch::is_running() const
 long long stopwatch::elapsed() const
 {
 	if (running)
-		return elapsed_ns + (clock.now() - started_time).count();
+		return elapsed_ns + (clock::now() - started_time).count();
 	return elapsed_ns;
 }
 
