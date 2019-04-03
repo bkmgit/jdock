@@ -6,8 +6,9 @@
 #include "matrix.hpp"
 #include "array.hpp"
 #include "ligand.hpp"
+#include "string.hpp"
 
-ligand::ligand(const path& p, array<double, 3>& origin)
+ligand::ligand(const path& p, array<double, 3>& origin, const pka& pka, double ph)
 	: xs{}
 	, num_active_torsions(0)
 {
@@ -80,6 +81,12 @@ ligand::ligand(const path& p, array<double, 3>& origin)
 			}
 			else // Current atom is a heavy atom.
 			{
+				// Test if the current atom should be ionized.
+				if (pka.is_ionized(a.name, trim(line.substr(17, 3)), line[21], ph))
+				{
+					a.donorize();
+				}
+
 				// Find bonds between the current atom and the other atoms of the same frame.
 				assert(bonds.size() == heavy_atoms.size());
 				bonds.push_back(vector<size_t>());

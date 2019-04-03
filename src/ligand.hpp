@@ -9,6 +9,7 @@
 #include "receptor.hpp"
 #include "conformation.hpp"
 #include "result.hpp"
+#include "pka.hpp"
 using namespace std::filesystem;
 
 //! Represents a ROOT or a BRANCH in PDBQT structure.
@@ -52,7 +53,7 @@ public:
 
 	//! Constructs a ligand by parsing a ligand file in pdbqt format.
 	//! @exception parsing_error Thrown when an atom type is not recognized or an empty branch is detected.
-	ligand(const path& p, array<double, 3>& origin);
+	ligand(const path& p, array<double, 3>& origin, const pka& pka, double ph);
 
 	//! Evaluates free energy e, force f, and change g. Returns true if the conformation is accepted.
 	bool evaluate(const conformation& conf, const scoring_function& sf, const receptor& rec, const double e_upper_bound, double& e, double& f, change& g) const;

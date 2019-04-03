@@ -8,14 +8,15 @@
 #include "random_forest.hpp"
 #include "receptor.hpp"
 #include "ligand.hpp"
+#include "pka.hpp"
 
 int main(int argc, char* argv[])
 {
 	path receptor_path, ligand_path, out_path;
 	array<double, 3> center, size;
 	size_t seed, num_threads, num_trees, num_tasks, max_conformations;
-	double granularity;
-	bool score_only, both_score_dock, with_rf_score, precise_mode, remove_nonstd;
+	double granularity, ph;
+	bool score_only, both_score_dock, with_rf_score, precise_mode, remove_nonstd, no_ionize;
 
 	// Process program options.
 	try
@@ -29,6 +30,7 @@ int main(int argc, char* argv[])
 		const size_t default_num_tasks = 64;
 		const size_t default_max_conformations = 9;
 		const double default_granularity = 0.125;
+		const double default_ph = 7.4;
 
 		// Set up options description.
 		using namespace boost::program_options;
@@ -60,6 +62,8 @@ int main(int argc, char* argv[])
 			("rf_score", bool_switch(&with_rf_score), "compute RF-Score as well")
 			("precise_mode", bool_switch(&precise_mode), "precise mode in which no precalculated energy grid map is used, requires --score_only or --score_dock")
 			("remove_nonstd", bool_switch(&remove_nonstd), "remove non standard residues from receptor")
+			("no_ionize", bool_switch(&no_ionize), "do NOT detect or use {ligand name}.pka file, thus no ionization/protonation is performed for ligand")
+			("ph", value<double>(&ph)->default_value(default_ph, "7.4"), "pH value used to ionize/protonate the input ligand(s)")
 			("help", "this help information")
 			("version", "version information")
 			("config", value<path>(), "configuration file to load options from")
@@ -295,9 +299,22 @@ int main(int argc, char* argv[])
 			<< flush;
 		log << stem;
 
+		// Detect and parse {ligand}.pka file.
+		pka ligand_pka;
+		if (!no_ionize)
+		{
+			auto pka_path = input_ligand_path;
+			pka_path.replace_extension("pka");
+
+			if (exists(pka_path))
+			{
+				ligand_pka = pka(pka_path);
+			}
+		}
+
 		// Parse the ligand.
 		array<double, 3> origin;
-		const ligand lig(input_ligand_path, origin);
+		const ligand lig(input_ligand_path, origin, ligand_pka, ph);
 		cout << separator << setw(8) << lig.num_heavy_atoms
 			<< separator << setw(8) << lig.num_active_torsions;
 		log << ',' << lig.num_heavy_atoms << ',' << lig.num_active_torsions;
