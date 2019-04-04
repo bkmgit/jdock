@@ -170,9 +170,11 @@ atom::atom(const string& line, size_t res_idx)
 	, residue(res_idx)
 	, coord({{stod(line.substr(30, 8)), stod(line.substr(38, 8)), stod(line.substr(46, 8))}})
 	, ad(find(ad_strings.cbegin(), ad_strings.cend(), trim(line.substr(77, 2))) - ad_strings.cbegin())
-	, xs(ad_to_xs[ad])
-	, rf(ad_to_rf[ad])
 {
+	if (ad >= ad_strings.size())
+		throw domain_error("Atom type " + trim(line.substr(77, 2)) + " cannot be recognized");
+	xs = ad_to_xs[ad];
+	rf = ad_to_rf[ad];
 }
 
 //! Returns true if the AutoDock4 atom type is not supported.

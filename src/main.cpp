@@ -184,392 +184,401 @@ int main(int argc, char* argv[])
 	}
 	catch (const exception& e)
 	{
-		cerr << e.what() << endl;
+		cerr << "ERROR: " << e.what() << endl;
 		return 1;
 	}
 
-	// Parse the receptor.
-	cout << "Parsing the receptor " << receptor_path << endl;
-	receptor rec = precise_mode && score_only ? receptor(receptor_path, remove_nonstd) : receptor(receptor_path, remove_nonstd, center, size, granularity);
-	cout << "Found " << rec.atoms.size() << " atoms in " << rec.residues.size() << " residues in receptor " << receptor_path << endl;
+	try
+	{
+		// Parse the receptor.
+		cout << "Parsing the receptor " << receptor_path << endl;
+		receptor rec = precise_mode && score_only ? receptor(receptor_path, remove_nonstd) : receptor(receptor_path, remove_nonstd, center, size, granularity);
+		cout << "Found " << rec.atoms.size() << " atoms in " << rec.residues.size() << " residues in receptor " << receptor_path << endl;
 
-	// Reserve storage for result containers.
-	vector<vector<result>> result_containers(num_tasks);
-	for (auto& rc : result_containers)
-	{
-		rc.reserve(20);	// Maximum number of results obtained from a single Monte Carlo task.
-	}
-	vector<result> results;
-	results.reserve(max_conformations);
-
-	// Enumerate and sort input ligands.
-	cout << "Enumerating input ligands in " << ligand_path << endl;
-	vector<path> input_ligand_paths;
-	if (is_regular_file(ligand_path))
-	{
-		input_ligand_paths.push_back(ligand_path);
-	}
-	else
-	{
-		for (directory_iterator dir_iter(ligand_path), end_dir_iter; dir_iter != end_dir_iter; ++dir_iter)
+		// Reserve storage for result containers.
+		vector<vector<result>> result_containers(num_tasks);
+		for (auto& rc : result_containers)
 		{
-			// Filter files with .pdbqt and .PDBQT extensions.
-			const path input_ligand_path = dir_iter->path();
-			const auto ext = input_ligand_path.extension();
-			if (ext != ".pdbqt" && ext != ".PDBQT") continue;
-			input_ligand_paths.push_back(input_ligand_path);
+			rc.reserve(20);	// Maximum number of results obtained from a single Monte Carlo task.
 		}
-	}
-	const size_t num_input_ligands = input_ligand_paths.size();
-	cout << "Sorting " << num_input_ligands << " input ligands in alphabetical order" << endl;
-	sort(input_ligand_paths.begin(), input_ligand_paths.end());
+		vector<result> results;
+		results.reserve(max_conformations);
 
-	// Initialize a Mersenne Twister random number generator.
-	cout << "Seeding a random number generator with " << seed << endl;
-	mt19937_64 rng(seed);
-
-	// Initialize an io service pool and create worker threads for later use.
-	cout << "Creating an io service pool of " << num_threads << " worker threads" << endl;
-	io_service_pool io(num_threads);
-	safe_counter<size_t> cnt;
-
-	// Precalculate the scoring function in parallel.
-	cout << "Calculating a scoring function of " << scoring_function::n << " atom types" << endl;
-	scoring_function sf;
-	cnt.init((sf.n + 1) * sf.n >> 1);
-	for (size_t t1 = 0; t1 < sf.n; ++t1)
-		for (size_t t0 = 0; t0 <= t1; ++t0)
+		// Enumerate and sort input ligands.
+		cout << "Enumerating input ligands in " << ligand_path << endl;
+		vector<path> input_ligand_paths;
+		if (is_regular_file(ligand_path))
 		{
-			io.post([&, t0, t1]()
-			{
-				sf.precalculate(t0, t1);
-				cnt.increment();
-			});
-		}
-	cnt.wait();
-	sf.clear();
-
-	forest f(num_trees, seed);
-	if (with_rf_score)
-	{
-		// Train RF-Score on the fly.
-		cout << "Training a random forest of " << num_trees << " trees with " << tree::nv << " variables and " << tree::ns << " samples" << endl;
-		cnt.init(num_trees);
-		for (size_t i = 0; i < num_trees; ++i)
-		{
-			io.post([&, i]()
-			{
-				f[i].train(8, f.u01_s);
-				cnt.increment();
-			});
-		}
-		cnt.wait();
-		f.clear();
-	}
-
-	// Output headers to the standard output and the log file.
-	const char separator = '|';
-	cout << "Creating grid maps of " << granularity << " A and running " << num_tasks << " Monte Carlo searches per ligand" << endl;
-	cout             << setw( 8) << "Index"
-		<< separator << setw(16) << "Ligand"
-		<< separator << setw( 8) << "Atoms"
-		<< separator << setw( 8) << "Torsions"
-		<< separator << setw( 6) << "nConfs"
-		<< separator << setw(22) << "idock score (kcal/mol)";
-	if (with_rf_score)
-		cout << separator << setw(14) << "RF-Score (pKd)";
-	cout << endl << setprecision(2);
-	cout.setf(ios::fixed, ios::floatfield);
-
-	ofstream log(out_path / (receptor_path.stem().string() + ".csv"));
-	log.setf(ios::fixed, ios::floatfield);
-	log << "Ligand,Atoms,Torsions,nConfs,idock score (kcal/mol)";
-	if (with_rf_score)
-		log << ",RF-Score (pKd)";
-	log << endl << setprecision(2);
-
-	// Start to dock each input ligand.
-	size_t index = 0;
-	for (const auto& input_ligand_path : input_ligand_paths)
-	{
-		// Output the ligand file stem.
-		const string stem = input_ligand_path.stem().string();
-		cout             << setw( 8) << ++index
-			<< separator << setw(16) << stem
-			<< flush;
-		log << stem;
-
-		// Detect and parse {ligand}.pka file.
-		pka ligand_pka;
-		if (!no_ionize)
-		{
-			auto pka_path = input_ligand_path;
-			pka_path.replace_extension("pka");
-
-			if (exists(pka_path))
-			{
-				ligand_pka = pka(pka_path);
-			}
-		}
-
-		// Parse the ligand.
-		array<double, 3> origin;
-		const ligand lig(input_ligand_path, origin, ligand_pka, ph);
-		cout << separator << setw(8) << lig.num_heavy_atoms
-			<< separator << setw(8) << lig.num_active_torsions;
-		log << ',' << lig.num_heavy_atoms << ',' << lig.num_active_torsions;
-
-		// Check if the current ligand has already been docked.
-		size_t num_confs = 0;
-		double id_score = 0;
-		double rf_score = 0;
-		const path output_ligand_path = out_path / input_ligand_path.filename();
-		if (exists(output_ligand_path) && !equivalent(ligand_path, out_path))
-		{
-			// Extract idock score and RF-Score from output file.
-			string line;
-			for (ifstream ifs(output_ligand_path); getline(ifs, line);)
-			{
-				const string record = line.substr(0, 10);
-				if (record == "MODEL     ")
-				{
-					++num_confs;
-				}
-				else if (num_confs == 1 && record == "REMARK 921")
-				{
-					id_score = stod(line.substr(55, 8));
-				}
-				else if (num_confs == 1 && record == "REMARK 927")
-				{
-					rf_score = stod(line.substr(55, 8));
-				}
-			}
+			input_ligand_paths.push_back(ligand_path);
 		}
 		else
 		{
-			// Precise mode uses grid maps if docking is going to perform as well.
-			if (rec.use_maps)
+			for (directory_iterator dir_iter(ligand_path), end_dir_iter; dir_iter != end_dir_iter; ++dir_iter)
 			{
-				// Find atom types that are present in the current ligand but not present in the grid maps.
-				vector<size_t> xs;
-				for (size_t t = 0; t < sf.n; ++t)
-				{
-					if (lig.xs[t] && rec.init_e(t))
-					{
-						xs.push_back(t);
-					}
-				}
-
-				// Create grid maps on the fly if necessary.
-				if (xs.size())
-				{
-					// Precalculate p_offset.
-					rec.precalculate(xs);
-
-					// Populate the grid map task container.
-					cnt.init(rec.num_probes[2]);
-					for (size_t z = 0; z < rec.num_probes[2]; ++z)
-					{
-						io.post([&, z]()
-						{
-							rec.populate(xs, z, sf);
-							cnt.increment();
-						});
-					}
-					cnt.wait();
-				}
+				// Filter files with .pdbqt and .PDBQT extensions.
+				const path input_ligand_path = dir_iter->path();
+				const auto ext = input_ligand_path.extension();
+				if (ext != ".pdbqt" && ext != ".PDBQT") continue;
+				input_ligand_paths.push_back(input_ligand_path);
 			}
+		}
+		const size_t num_input_ligands = input_ligand_paths.size();
+		cout << "Sorting " << num_input_ligands << " input ligands in alphabetical order" << endl;
+		sort(input_ligand_paths.begin(), input_ligand_paths.end());
 
-			vector<bool> mask(rec.residues.size());
+		// Initialize a Mersenne Twister random number generator.
+		cout << "Seeding a random number generator with " << seed << endl;
+		mt19937_64 rng(seed);
 
-			// To dock, search conformations.
-			if (!score_only)
+		// Initialize an io service pool and create worker threads for later use.
+		cout << "Creating an io service pool of " << num_threads << " worker threads" << endl;
+		io_service_pool io(num_threads);
+		safe_counter<size_t> cnt;
+
+		// Precalculate the scoring function in parallel.
+		cout << "Calculating a scoring function of " << scoring_function::n << " atom types" << endl;
+		scoring_function sf;
+		cnt.init((sf.n + 1) * sf.n >> 1);
+		for (size_t t1 = 0; t1 < sf.n; ++t1)
+			for (size_t t0 = 0; t0 <= t1; ++t0)
 			{
-				// Run the Monte Carlo tasks.
-				cnt.init(num_tasks);
-				for (size_t i = 0; i < num_tasks; ++i)
-				{
-					assert(result_containers[i].empty());
-					const size_t s = rng();
-					io.post([&, i, s]()
+				io.post([&, t0, t1]()
 					{
-						lig.monte_carlo(result_containers[i], s, sf, rec);
+						sf.precalculate(t0, t1);
 						cnt.increment();
 					});
-				}
-				cnt.wait();
+			}
+		cnt.wait();
+		sf.clear();
 
-				// Merge results from all tasks into one single result container.
-				assert(results.empty());
-				const double required_square_error = static_cast<double>(4 * lig.num_heavy_atoms); // Ligands with RMSD < 2.0 will be clustered into the same cluster.
-				for (auto& result_container : result_containers)
-				{
-					for (auto& result : result_container)
+		forest f(num_trees, seed);
+		if (with_rf_score)
+		{
+			// Train RF-Score on the fly.
+			cout << "Training a random forest of " << num_trees << " trees with " << tree::nv << " variables and " << tree::ns << " samples" << endl;
+			cnt.init(num_trees);
+			for (size_t i = 0; i < num_trees; ++i)
+			{
+				io.post([&, i]()
 					{
-						result::push(results, move(result), required_square_error);
+						f[i].train(8, f.u01_s);
+						cnt.increment();
+					});
+			}
+			cnt.wait();
+			f.clear();
+		}
+
+		// Output headers to the standard output and the log file.
+		const char separator = '|';
+		cout << "Creating grid maps of " << granularity << " A and running " << num_tasks << " Monte Carlo searches per ligand" << endl;
+		cout             << setw( 8) << "Index"
+			<< separator << setw(16) << "Ligand"
+			<< separator << setw( 8) << "Atoms"
+			<< separator << setw( 8) << "Torsions"
+			<< separator << setw( 6) << "nConfs"
+			<< separator << setw(22) << "idock score (kcal/mol)";
+		if (with_rf_score)
+			cout << separator << setw(14) << "RF-Score (pKd)";
+		cout << endl << setprecision(2);
+		cout.setf(ios::fixed, ios::floatfield);
+
+		ofstream log(out_path / (receptor_path.stem().string() + ".csv"));
+		log.setf(ios::fixed, ios::floatfield);
+		log << "Ligand,Atoms,Torsions,nConfs,idock score (kcal/mol)";
+		if (with_rf_score)
+			log << ",RF-Score (pKd)";
+		log << endl << setprecision(2);
+
+		// Start to dock each input ligand.
+		size_t index = 0;
+		for (const auto& input_ligand_path : input_ligand_paths)
+		{
+			// Output the ligand file stem.
+			const string stem = input_ligand_path.stem().string();
+			cout             << setw( 8) << ++index
+				<< separator << setw(16) << stem
+				<< flush;
+			log << stem;
+
+			// Detect and parse {ligand}.pka file.
+			pka ligand_pka;
+			if (!no_ionize)
+			{
+				auto pka_path = input_ligand_path;
+				pka_path.replace_extension("pka");
+
+				if (exists(pka_path))
+				{
+					ligand_pka = pka(pka_path);
+				}
+			}
+
+			// Parse the ligand.
+			array<double, 3> origin;
+			const ligand lig(input_ligand_path, origin, ligand_pka, ph);
+			cout << separator << setw(8) << lig.num_heavy_atoms
+				<< separator << setw(8) << lig.num_active_torsions;
+			log << ',' << lig.num_heavy_atoms << ',' << lig.num_active_torsions;
+
+			// Check if the current ligand has already been docked.
+			size_t num_confs = 0;
+			double id_score = 0;
+			double rf_score = 0;
+			const path output_ligand_path = out_path / input_ligand_path.filename();
+			if (exists(output_ligand_path) && !equivalent(ligand_path, out_path))
+			{
+				// Extract idock score and RF-Score from output file.
+				string line;
+				for (ifstream ifs(output_ligand_path); getline(ifs, line);)
+				{
+					const string record = line.substr(0, 10);
+					if (record == "MODEL     ")
+					{
+						++num_confs;
 					}
-					result_container.clear();
+					else if (num_confs == 1 && record == "REMARK 921")
+					{
+						id_score = stod(line.substr(55, 8));
+					}
+					else if (num_confs == 1 && record == "REMARK 927")
+					{
+						rf_score = stod(line.substr(55, 8));
+					}
+				}
+			}
+			else
+			{
+				// Precise mode uses grid maps if docking is going to perform as well.
+				if (rec.use_maps)
+				{
+					// Find atom types that are present in the current ligand but not present in the grid maps.
+					vector<size_t> xs;
+					for (size_t t = 0; t < sf.n; ++t)
+					{
+						if (lig.xs[t] && rec.init_e(t))
+						{
+							xs.push_back(t);
+						}
+					}
+
+					// Create grid maps on the fly if necessary.
+					if (xs.size())
+					{
+						// Precalculate p_offset.
+						rec.precalculate(xs);
+
+						// Populate the grid map task container.
+						cnt.init(rec.num_probes[2]);
+						for (size_t z = 0; z < rec.num_probes[2]; ++z)
+						{
+							io.post([&, z]()
+								{
+									rec.populate(xs, z, sf);
+									cnt.increment();
+								});
+						}
+						cnt.wait();
+					}
 				}
 
-				num_confs = results.size();
-				if (num_confs)
+				vector<bool> mask(rec.residues.size());
+
+				// To dock, search conformations.
+				if (!score_only)
 				{
-					// Adjust free energy relative to the best conformation and flexibility.
-					const auto& best_result = results.front();
-					const double best_result_intra_e = best_result.e - best_result.f;
-					for (auto& result : results)
+					// Run the Monte Carlo tasks.
+					cnt.init(num_tasks);
+					for (size_t i = 0; i < num_tasks; ++i)
 					{
-						result.e_nd = (result.e - best_result_intra_e) * lig.flexibility_penalty_factor;
+						assert(result_containers[i].empty());
+						const size_t s = rng();
+						io.post([&, i, s]()
+							{
+								lig.monte_carlo(result_containers[i], s, sf, rec);
+								cnt.increment();
+							});
+					}
+					cnt.wait();
+
+					// Merge results from all tasks into one single result container.
+					assert(results.empty());
+					const double required_square_error = static_cast<double>(4 * lig.num_heavy_atoms); // Ligands with RMSD < 2.0 will be clustered into the same cluster.
+					for (auto& result_container : result_containers)
+					{
+						for (auto& result : result_container)
+						{
+							result::push(results, move(result), required_square_error);
+						}
+						result_container.clear();
+					}
+
+					num_confs = results.size();
+					if (num_confs)
+					{
+						// Adjust free energy relative to the best conformation and flexibility.
+						const auto& best_result = results.front();
+						const double best_result_intra_e = best_result.e - best_result.f;
+						for (auto& result : results)
+						{
+							result.e_nd = (result.e - best_result_intra_e) * lig.flexibility_penalty_factor;
+							if (with_rf_score)
+							{
+								result.rf = lig.calculate_rf_score(result, rec, f);
+							}
+							// Result from compose_result is not complete and need to be completed.
+							lig.calculate_by_comp(result, sf, rec, mask);
+						}
+						id_score = best_result.e_nd;
+						rf_score = best_result.rf;
+					}
+				}
+
+				// To run scoring against input ligand.
+				if (score_only || both_score_dock)
+				{
+					++num_confs;
+					if (precise_mode)
+					{
+						// The returned result is complete with per residue/heavy_atom energy.
+						auto r0 = lig.complete_result_noconf(origin, sf, rec, mask);
+						r0.e_nd = r0.f * lig.flexibility_penalty_factor;
 						if (with_rf_score)
 						{
-							result.rf = lig.calculate_rf_score(result, rec, f);
+							r0.rf = lig.calculate_rf_score(r0, rec, f);
+						}
+						id_score = r0.e_nd;
+						rf_score = r0.rf;
+						results.insert(results.begin(), move(r0));
+					}
+					else
+					{
+						conformation c0(lig.num_active_torsions);
+						c0.position = origin;
+						double e0, f0;
+						change g0(0);
+						lig.evaluate(c0, sf, rec, -99, e0, f0, g0);
+						auto r0 = lig.compose_result(e0, f0, c0, false);
+						r0.e_nd = r0.f * lig.flexibility_penalty_factor;
+						if (with_rf_score)
+						{
+							r0.rf = lig.calculate_rf_score(r0, rec, f);
 						}
 						// Result from compose_result is not complete and need to be completed.
-						lig.calculate_by_comp(result, sf, rec, mask);
+						lig.calculate_by_comp(r0, sf, rec, mask);
+						id_score = r0.e_nd;
+						rf_score = r0.rf;
+						results.insert(results.begin(), move(r0));
 					}
-					id_score = best_result.e_nd;
-					rf_score = best_result.rf;
+				}
+
+				// If conformations are found, output them.
+				if (num_confs)
+				{
+					// Write models to file.
+					lig.write_models(output_ligand_path, results, rec);
+
+					// Output per residue energy for all conformations.
+					ofstream rep(out_path / (stem + ".csv"));
+					rep.setf(ios::fixed, ios::floatfield);
+					rep << "Chain ID,Residue name,Residue sequence";
+
+					for (size_t i = 0; i < num_confs; ++i)
+					{
+						rep << ",Conf " << i + 1;
+						if (!results[i].from_docking)
+							rep << "(Input)";
+					}
+					rep << endl << setprecision(3);
+
+					for (size_t k = 0; k < mask.size(); ++k)
+					{
+						if (!mask[k])
+							continue;
+
+						const auto& res = rec.residues[k];
+						rep << res.chain << ',' << res.name << ',' << res.seq;
+
+						for (size_t i = 0; i < num_confs; ++i)
+						{
+							rep << ',';
+							if (results[i].e_residues[k] != 0.0)
+								rep << results[i].e_residues[k];
+						}
+
+						rep << endl;
+					}
+
+					rep << endl;
+					if (with_rf_score)
+					{
+						rep << "Binding Affinity,,";
+						for (size_t i = 0; i < num_confs; ++i)
+						{
+							rep << ',' << results[i].rf;
+						}
+						rep << endl;
+					}
+
+					rep << "Intra-Ligand Free,,";
+					for (size_t i = 0; i < num_confs; ++i)
+					{
+						rep << ',' << (results[i].e - results[i].f);
+					}
+					rep << endl;
+
+					rep << "Inter-Ligand Free,,";
+					for (size_t i = 0; i < num_confs; ++i)
+					{
+						rep << ',' << results[i].f;
+					}
+					rep << endl;
+
+					rep << "Total Free Energy,,";
+					for (size_t i = 0; i < num_confs; ++i)
+					{
+						rep << ',' << results[i].e;
+					}
+					rep << endl;
+
+					rep << "Normalized Total Free Energy,,";
+					for (size_t i = 0; i < num_confs; ++i)
+					{
+						rep << ',' << results[i].e_nd;
+					}
+					rep << endl;
+
+					// Clear the results of the current ligand.
+					results.clear();
 				}
 			}
 
-			// To run scoring against input ligand.
-			if (score_only || both_score_dock)
-			{
-				++num_confs;
-				if (precise_mode)
-				{
-					// The returned result is complete with per residue/heavy_atom energy.
-					auto r0 = lig.complete_result_noconf(origin, sf, rec, mask);
-					r0.e_nd = r0.f * lig.flexibility_penalty_factor;
-					if (with_rf_score)
-					{
-						r0.rf = lig.calculate_rf_score(r0, rec, f);
-					}
-					id_score = r0.e_nd;
-					rf_score = r0.rf;
-					results.insert(results.begin(), move(r0));
-				}
-				else
-				{
-					conformation c0(lig.num_active_torsions);
-					c0.position = origin;
-					double e0, f0;
-					change g0(0);
-					lig.evaluate(c0, sf, rec, -99, e0, f0, g0);
-					auto r0 = lig.compose_result(e0, f0, c0, false);
-					r0.e_nd = r0.f * lig.flexibility_penalty_factor;
-					if (with_rf_score)
-					{
-						r0.rf = lig.calculate_rf_score(r0, rec, f);
-					}
-					// Result from compose_result is not complete and need to be completed.
-					lig.calculate_by_comp(r0, sf, rec, mask);
-					id_score = r0.e_nd;
-					rf_score = r0.rf;
-					results.insert(results.begin(), move(r0));
-				}
-			}
-
-			// If conformations are found, output them.
+			// If output file or conformations are found, output the idock score and RF-Score.
+			cout << separator << setw(6) << num_confs;
+			log << ',' << num_confs;
 			if (num_confs)
 			{
-				// Write models to file.
-				lig.write_models(output_ligand_path, results, rec);
-
-				// Output per residue energy for all conformations.
-				ofstream rep(out_path / (stem + ".csv"));
-				rep.setf(ios::fixed, ios::floatfield);
-				rep << "Chain ID,Residue name,Residue sequence";
-
-				for (size_t i = 0; i < num_confs; ++i)
-				{
-					rep << ",Conf " << i + 1;
-					if (!results[i].from_docking)
-						rep << "(Input)";
-				}
-				rep << endl << setprecision(3);
-
-				for (size_t k = 0; k < mask.size(); ++k)
-				{
-					if (!mask[k])
-						continue;
-
-					const auto& res = rec.residues[k];
-					rep << res.chain << ',' << res.name << ',' << res.seq;
-
-					for (size_t i = 0; i < num_confs; ++i)
-					{
-						rep << ',';
-						if (results[i].e_residues[k] != 0.0)
-							rep << results[i].e_residues[k];
-					}
-
-					rep << endl;
-				}
-
-				rep << endl;
+				cout << separator << setw(22) << id_score;
+				log << ',' << id_score;
 				if (with_rf_score)
 				{
-					rep << "Binding Affinity,,";
-					for (size_t i = 0; i < num_confs; ++i)
-					{
-						rep << ',' << results[i].rf;
-					}
-					rep << endl;
+					cout << separator << setw(14) << rf_score;
+					log << ',' << rf_score;
 				}
-
-				rep << "Intra-Ligand Free,,";
-				for (size_t i = 0; i < num_confs; ++i)
-				{
-					rep << ',' << (results[i].e - results[i].f);
-				}
-				rep << endl;
-
-				rep << "Inter-Ligand Free,,";
-				for (size_t i = 0; i < num_confs; ++i)
-				{
-					rep << ',' << results[i].f;
-				}
-				rep << endl;
-
-				rep << "Total Free Energy,,";
-				for (size_t i = 0; i < num_confs; ++i)
-				{
-					rep << ',' << results[i].e;
-				}
-				rep << endl;
-
-				rep << "Normalized Total Free Energy,,";
-				for (size_t i = 0; i < num_confs; ++i)
-				{
-					rep << ',' << results[i].e_nd;
-				}
-				rep << endl;
-
-				// Clear the results of the current ligand.
-				results.clear();
 			}
+			cout << endl;
+			log << endl;
+
+			// Output to the log file in csv format. The log file can be sorted using: head -1 log.csv && tail -n +2 log.csv | awk -F, '{ printf "%s,%s\n", $2||0, $0 }' | sort -t, -k1nr -k6n | cut -d, -f2-
 		}
 
-		// If output file or conformations are found, output the idock score and RF-Score.
-		cout << separator << setw(6) << num_confs;
-		log << ',' << num_confs;
-		if (num_confs)
-		{
-			cout << separator << setw(22) << id_score;
-			log << ',' << id_score;
-			if (with_rf_score)
-			{
-				cout << separator << setw(14) << rf_score;
-				log << ',' << rf_score;
-			}
-		}
-		cout << endl;
-		log << endl;
-
-		// Output to the log file in csv format. The log file can be sorted using: head -1 log.csv && tail -n +2 log.csv | awk -F, '{ printf "%s,%s\n", $2||0, $0 }' | sort -t, -k1nr -k6n | cut -d, -f2-
+		// Wait until the io service pool has finished all its tasks.
+		io.wait();
+		return 0;
 	}
-
-	// Wait until the io service pool has finished all its tasks.
-	io.wait();
+	catch (const exception& e)
+	{
+		cerr << "ERROR: " << e.what() << endl;
+		return 2;
+	}
 }
