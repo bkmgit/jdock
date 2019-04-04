@@ -220,7 +220,7 @@ ligand::ligand(const path& p, array<double, 3>& origin, const pka& pka, double p
 	num_torsions = num_frames - 1;
 	assert(num_torsions + 1 == num_frames);
 	assert(num_torsions >= num_active_torsions);
-	assert(num_heavy_atoms + num_hydrogens + (num_torsions << 1) + 3 == lines.size()); // ATOM/HETATM lines + BRANCH/ENDBRANCH lines + ROOT/ENDROOT/TORSDOF lines == lines.size()
+	assert(num_heavy_atoms + num_hydrogens + (num_torsions << 1) + (num_torsions ? 3 : 0) == lines.size()); // ATOM/HETATM lines + BRANCH/ENDBRANCH lines + ROOT/ENDROOT/TORSDOF lines == lines.size()
 	flexibility_penalty_factor = 1 / (1 + 0.05846 * (num_active_torsions + 0.5 * (num_torsions - num_active_torsions)));
 	assert(flexibility_penalty_factor <= 1);
 
