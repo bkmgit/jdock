@@ -36,18 +36,18 @@ int main(int argc, char* argv[])
 		using namespace boost::program_options;
 		options_description input_options("input (required)");
 		input_options.add_options()
-			("receptor", value<path>(&receptor_path)->required(), "receptor file in PDBQT format")
-			("ligand", value<path>(&ligand_path)->required(), "ligand file or folder of ligands in PDBQT format")
-			("center_x", value<double>(&center[0]), "x coordinate of the search space center, not required if both --score_only and --precise_mode are on")
-			("center_y", value<double>(&center[1]), "y coordinate of the search space center, not required if both --score_only and --precise_mode are on")
-			("center_z", value<double>(&center[2]), "z coordinate of the search space center, not required if both --score_only and --precise_mode are on")
+			("receptor,r", value<path>(&receptor_path)->required(), "receptor file in PDBQT format")
+			("ligand,l", value<path>(&ligand_path)->required(), "ligand file or folder of ligands in PDBQT format")
+			("center_x,x", value<double>(&center[0]), "x coordinate of the search space center, not required if both --score_only and --precise_mode are on")
+			("center_y,y", value<double>(&center[1]), "y coordinate of the search space center, not required if both --score_only and --precise_mode are on")
+			("center_z,z", value<double>(&center[2]), "z coordinate of the search space center, not required if both --score_only and --precise_mode are on")
 			("size_x", value<double>(&size[0]), "size in the x dimension in Angstrom, not required if both --score_only and --precise_mode are on")
 			("size_y", value<double>(&size[1]), "size in the y dimension in Angstrom, not required if both --score_only and --precise_mode are on")
 			("size_z", value<double>(&size[2]), "size in the z dimension in Angstrom, not required if both --score_only and --precise_mode are on")
 			;
 		options_description output_options("output (optional)");
 		output_options.add_options()
-			("out", value<path>(&out_path)->default_value(default_out_path), "folder of predicted conformations in PDBQT format")
+			("out,o", value<path>(&out_path)->default_value(default_out_path), "folder of predicted conformations in PDBQT format")
 			;
 		options_description miscellaneous_options("options (optional)");
 		miscellaneous_options.add_options()
@@ -57,16 +57,16 @@ int main(int argc, char* argv[])
 			("tasks", value<size_t>(&num_tasks)->default_value(default_num_tasks), "number of Monte Carlo tasks for global search")
 			("conformations", value<size_t>(&max_conformations)->default_value(default_max_conformations), "maximum number of binding conformations to write")
 			("granularity", value<double>(&granularity)->default_value(default_granularity), "density of probe atoms of grid maps")
-			("score_only", bool_switch(&score_only), "scoring input ligand conformation without docking, this option conflicts with --score_dock")
-			("score_dock", bool_switch(&both_score_dock), "scoring input ligand conformation as well as docking, this option conflicts with --score_only")
-			("rf_score", bool_switch(&with_rf_score), "compute RF-Score as well")
-			("precise_mode", bool_switch(&precise_mode), "precise mode in which no precalculated energy grid map is used, requires --score_only or --score_dock")
-			("remove_nonstd", bool_switch(&remove_nonstd), "remove non standard residues from receptor")
-			("no_ionize", bool_switch(&no_ionize), "do NOT detect or use {ligand name}.pka file, thus no ionization/protonation is performed for ligand")
+			("score_only,s", bool_switch(&score_only), "scoring input ligand conformation without docking, this option conflicts with --score_dock")
+			("score_dock,d", bool_switch(&both_score_dock), "scoring input ligand conformation as well as docking, this option conflicts with --score_only")
+			("rf_score,f", bool_switch(&with_rf_score), "compute RF-Score as well")
+			("precise_mode,p", bool_switch(&precise_mode), "precise mode in which no precalculated energy grid map is used, requires --score_only or --score_dock")
+			("remove_nonstd,a", bool_switch(&remove_nonstd), "remove non standard residues from receptor")
+			("no_ionize,n", bool_switch(&no_ionize), "do NOT detect or use {ligand name}.pka file, thus no ionization/protonation is performed for ligand")
 			("ph", value<double>(&ph)->default_value(default_ph, "7.4"), "pH value used to ionize/protonate the input ligand(s)")
 			("help", "this help information")
-			("version", "version information")
-			("config", value<path>(), "configuration file to load options from")
+			("version,V", "version information")
+			("config,c", value<path>(), "configuration file to load options from")
 			;
 		options_description all_options;
 		all_options.add(input_options).add(output_options).add(miscellaneous_options);
@@ -85,7 +85,7 @@ int main(int argc, char* argv[])
 		// If version is requested, print the version and exit.
 		if (vm.count("version"))
 		{
-			cout << "2.2.2b" << endl;
+			cout << "2.2.2a" << endl;
 			return 0;
 		}
 
