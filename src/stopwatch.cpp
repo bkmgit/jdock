@@ -3,8 +3,8 @@
 //! Constructs a standby stopwatch.
 stopwatch::stopwatch()
 	: elapsed_ns(0)
-	, running(false)
 	, started_time()
+	, running(false)
 {
 }
 

@@ -4,7 +4,7 @@ bin/idock: obj/io_service_pool.o obj/safe_counter.o obj/array.o obj/string.o obj
 	${CC} -o $@ $^ -pthread -L${BOOST_ROOT}/stage/linux_x64/lib -lstdc++fs -lboost_program_options-gcc8-mt-s-x64-1_69 -lboost_thread-gcc8-mt-s-x64-1_69
 
 obj/%.o: src/%.cpp
-	${CC} -o $@ $< -c -std=c++17 -DNDEBUG -Wall -Wno-reorder -I${BOOST_ROOT}
+	${CC} -o $@ $< -c -std=c++17 -DNDEBUG -Wall -I${BOOST_ROOT}
 
 clean:
 	rm -f bin/idock obj/*.o

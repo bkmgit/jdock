@@ -22,6 +22,8 @@ public:
 	explicit result(const double e, const double f, bool from_docking, vector<array<double, 3>>&& heavy_atoms, vector<array<double, 3>>&& hydrogens, vector<double>&& e_heavy_atoms, vector<double>&& e_residues)
 		: e(e)
 		, f(f)
+		, e_nd()
+		, rf()
 		, from_docking(from_docking)
 		, heavy_atoms(move(heavy_atoms))
 		, hydrogens(move(hydrogens))

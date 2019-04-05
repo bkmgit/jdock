@@ -35,9 +35,14 @@ public:
 		, rotorXsrn(rotorXsrn)
 		, rotorYsrn(rotorYsrn)
 		, rotorXidx(rotorXidx)
+		, rotorYidx()
 		, habegin(habegin)
+		, haend()
 		, hybegin(hybegin)
+		, hyend()
 		, active(true)
+		, parent_rotorY_to_current_rotorY{}
+		, parent_rotorX_to_current_rotorY{}
 	{
 	}
 };

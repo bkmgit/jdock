@@ -9,31 +9,33 @@
 #include "receptor.hpp"
 
 receptor::receptor(const path& p, bool remove_nonstd)
-	: center()
+	: p_offset()
+	, maps()
+	, center()
 	, size()
+	, use_maps(false)
 	, corner0()
 	, corner1()
 	, granularity()
 	, granularity_inverse()
 	, num_probes()
 	, num_probes_product()
-	, use_maps(false)
 {
 	parse_pdbqt(p, remove_nonstd);
 }
 
 receptor::receptor(const path& p, bool remove_nonstd, const array<double, 3>& center, const array<double, 3>& size, const double granularity)
-	: center(center)
+	: p_offset(scoring_function::n)
+	, maps(scoring_function::n)
+	, center(center)
 	, size(size)
+	, use_maps(true)
 	, corner0(center - 0.5 * size)
 	, corner1(corner0 + size)
 	, granularity(granularity)
 	, granularity_inverse(1 / granularity)
 	, num_probes({{static_cast<size_t>(size[0] * granularity_inverse) + 2, static_cast<size_t>(size[1] * granularity_inverse) + 2, static_cast<size_t>(size[2] * granularity_inverse) + 2}})
 	, num_probes_product(num_probes[0] * num_probes[1] * num_probes[2])
-	, p_offset(scoring_function::n)
-	, maps(scoring_function::n)
-	, use_maps(true)
 {
 	parse_pdbqt(p, remove_nonstd);
 }

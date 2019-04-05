@@ -11,6 +11,14 @@ using namespace std::filesystem;
 //! Represents a receptor.
 class receptor
 {
+private:
+	vector<vector<size_t>> p_offset; //!< Auxiliary precalculated constants to accelerate grid map creation.
+	vector<vector<double>> maps; //!< Grid maps.
+	const array<double, 3> center; //!< Box center.
+	const array<double, 3> size; //!< 3D sizes of box.
+
+	void parse_pdbqt(const path& p, bool remove_nonstd);
+
 public:
 	//! Constructs a receptor by parsing a receptor file in pdbqt format.
 	explicit receptor(const path& p, bool remove_nonstd);
@@ -72,14 +80,6 @@ public:
 
 	//! Populates grid maps for certain atom types along X and Y dimensions for a given Z dimension value.
 	void populate(const vector<size_t>& xs, const size_t z, const scoring_function& sf);
-
-private:
-	const array<double, 3> center; //!< Box center.
-	const array<double, 3> size; //!< 3D sizes of box.
-	vector<vector<size_t>> p_offset; //!< Auxiliary precalculated constants to accelerate grid map creation.
-	vector<vector<double>> maps; //!< Grid maps.
-
-	void parse_pdbqt(const path& p, bool remove_nonstd);
 };
 
 #endif
