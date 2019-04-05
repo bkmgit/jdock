@@ -9,6 +9,7 @@
 #include "receptor.hpp"
 #include "ligand.hpp"
 #include "pka.hpp"
+#include "string.hpp"
 
 int main(int argc, char* argv[])
 {
@@ -330,7 +331,7 @@ int main(int argc, char* argv[])
 			{
 				// Extract idock score and RF-Score from output file.
 				string line;
-				for (ifstream ifs(output_ligand_path); getline(ifs, line);)
+				for (ifstream ifs(output_ligand_path); safe_getline(ifs, line);)
 				{
 					const string record = line.substr(0, 10);
 					if (record == "MODEL     ")

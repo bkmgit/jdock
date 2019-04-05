@@ -69,7 +69,7 @@ void receptor::parse_pdbqt(const path& p, bool remove_nonstd)
 	//   -l GEN             add hydrogens with generic organic molecule.
 	//   -r APOLAR          remove non-polar hydrogens.
 	//   -w                 remove water.
-	for (ifstream ifs(p); getline(ifs, line);)
+	for (ifstream ifs(p); safe_getline(ifs, line);)
 	{
 		const string record = line.substr(0, 6);
 		if (record == "ATOM  " || record == "HETATM")

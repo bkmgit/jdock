@@ -18,7 +18,7 @@ pka::pka(const path& p)
 {
 	string line;
 	bool found = false;
-	for (ifstream ifs(p); getline(ifs, line);)
+	for (ifstream ifs(p); safe_getline(ifs, line);)
 	{
 		if (!found)
 		{

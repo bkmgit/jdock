@@ -41,7 +41,7 @@ ligand::ligand(const path& p, array<double, 3>& origin, const pka& pka, double p
 	//   -r APOLAR          remove non-polar hydrogens.
 	//   -j FLEX            output as a flexible molecule with branches.
 	//   -w                 remove water.
-	for (ifstream ifs(p); getline(ifs, line);)
+	for (ifstream ifs(p); safe_getline(ifs, line);)
 	{
 		const string record = line.substr(0, 6);
 		if (record == "ATOM  " || record == "HETATM")
