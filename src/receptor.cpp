@@ -49,7 +49,7 @@ void receptor::parse_pdbqt(const path& p, bool remove_nonstd)
 	// Initialize helper variables for parsing.
 	string residue_seq = "XXXX"; // Current residue sequence, used to track residue change, initialized to a dummy value.
 	size_t residue_start = 0; // The starting atom of the current residue.
-	size_t residue_idx = -1; // The index in residues of the current residue.
+	size_t residue_idx = SIZE_MAX; // The index in residues of the current residue.
 	char altloc = 0; // Alternate location indicator.
 
 	string line;
@@ -91,7 +91,7 @@ void receptor::parse_pdbqt(const path& p, bool remove_nonstd)
 				// When remove_nonstd is on, only standard amino acids should be stored and contribute energy.
 				if (remove_nonstd && !res.is_amino_acid())
 				{
-					residue_idx = -1;
+					residue_idx = SIZE_MAX;
 				}
 				else
 				{
@@ -101,7 +101,7 @@ void receptor::parse_pdbqt(const path& p, bool remove_nonstd)
 			}
 
 			// Discard non-amino acid.
-			if (residue_idx < 0)
+			if (residue_idx == SIZE_MAX)
 				continue;
 
 			// A non space alternate location indicator means

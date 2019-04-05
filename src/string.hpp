@@ -6,7 +6,7 @@
 #include <istream>
 using namespace std;
 
-// Since C++17, copy elision is mandatory and no rvalue reference type or move is required.
+// Since C++17, copy elision is mandatory and no rvalue reference type or move is required on returning.
 // See https://stackoverflow.com/a/38043447 and http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/p0135r0.html
 
 //! Remove leading white spaces from a string.
