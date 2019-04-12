@@ -27,7 +27,7 @@ int main(int argc, char* argv[])
 		using namespace std::chrono;
 		const path default_out_path = ".";
 		const size_t default_seed = duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
-		const size_t default_num_threads = boost::thread::hardware_concurrency();
+		const size_t default_num_threads = std::thread::hardware_concurrency();
 		const size_t default_num_trees = 500;
 		const size_t default_num_tasks = 64;
 		const size_t default_max_conformations = 9;
