@@ -2,10 +2,10 @@
 #ifndef IDOCK_RECEPTOR_HPP
 #define IDOCK_RECEPTOR_HPP
 
-#include <boost/filesystem/path.hpp>
+#include <filesystem>
 #include "scoring_function.hpp"
 #include "atom.hpp"
-using namespace boost::filesystem;
+using namespace std::filesystem;
 
 //! Represents a receptor.
 class receptor

@@ -1,7 +1,8 @@
 #include <random>
 #include <iostream>
 #include <iomanip>
-#include <boost/filesystem/fstream.hpp>
+#include <fstream>
+#include <cassert>
 #include "matrix.hpp"
 #include "array.hpp"
 #include "ligand.hpp"
@@ -24,7 +25,7 @@ ligand::ligand(const path& p, array<double, 3>& origin) : xs{}, num_active_torsi
 	string line;
 
 	// Start parsing.
-	for (boost::filesystem::ifstream ifs(p); getline(ifs, line);)
+	for (ifstream ifs(p); getline(ifs, line);)
 	{
 		const string record = line.substr(0, 6);
 		if (record == "ATOM  " || record == "HETATM")
@@ -550,7 +551,7 @@ void ligand::write_models(const path& output_ligand_path, const vector<result>& 
 	assert(num_results);
 
 	// Dump binding conformations to the output ligand file.
-	boost::filesystem::ofstream ofs(output_ligand_path);
+	ofstream ofs(output_ligand_path);
 	ofs.setf(ios::fixed, ios::floatfield);
 	for (size_t k = 0; k < num_results; ++k)
 	{

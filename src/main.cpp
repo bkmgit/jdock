@@ -1,9 +1,9 @@
 #include <chrono>
 #include <iostream>
 #include <iomanip>
+#include <filesystem>
+#include <fstream>
 #include <boost/program_options.hpp>
-#include <boost/filesystem/operations.hpp>
-#include <boost/filesystem/fstream.hpp>
 #include "io_service_pool.hpp"
 #include "safe_counter.hpp"
 #include "random_forest.hpp"
@@ -12,6 +12,8 @@
 
 int main(int argc, char* argv[])
 {
+	using namespace std;
+	using namespace std::filesystem;
 	path receptor_path, ligand_path, out_path;
 	array<double, 3> center, size;
 	size_t seed, num_threads, num_trees, num_tasks, max_conformations;
@@ -22,8 +24,9 @@ int main(int argc, char* argv[])
 	try
 	{
 		// Initialize the default values of optional arguments.
+		using namespace std::chrono;
 		const path default_out_path = ".";
-		const size_t default_seed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+		const size_t default_seed = duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
 		const size_t default_num_threads = boost::thread::hardware_concurrency();
 		const size_t default_num_trees = 500;
 		const size_t default_num_tasks = 64;
@@ -84,7 +87,7 @@ int main(int argc, char* argv[])
 		// If a configuration file is present, parse it.
 		if (vm.count("config"))
 		{
-			boost::filesystem::ifstream config_file(vm["config"].as<path>());
+			ifstream config_file(vm["config"].as<path>());
 			store(parse_config_file(config_file, all_options), vm);
 		}
 
@@ -235,7 +238,7 @@ int main(int argc, char* argv[])
 	cout << "Creating grid maps of " << granularity << " A and running " << num_tasks << " Monte Carlo searches per ligand" << endl
 		<< "   Index             Ligand   nConfs   idock score (kcal/mol)   RF-Score (pKd)" << endl << setprecision(2);
 	cout.setf(ios::fixed, ios::floatfield);
-	boost::filesystem::ofstream log(out_path / "log.csv");
+	ofstream log(out_path / "log.csv");
 	log.setf(ios::fixed, ios::floatfield);
 	log << "Ligand,nConfs,idock score (kcal/mol),RF-Score (pKd)" << endl << setprecision(2);
 
@@ -256,7 +259,7 @@ int main(int argc, char* argv[])
 		{
 			// Extract idock score and RF-Score from output file.
 			string line;
-			for (boost::filesystem::ifstream ifs(output_ligand_path); getline(ifs, line);)
+			for (ifstream ifs(output_ligand_path); getline(ifs, line);)
 			{
 				const string record = line.substr(0, 10);
 				if (record == "MODEL     ")
