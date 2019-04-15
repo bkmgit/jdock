@@ -14,8 +14,6 @@ public:
 	//! Constructs a receptor by parsing a receptor file in pdbqt format.
 	explicit receptor(const path& p, const array<double, 3>& center, const array<double, 3>& size, const double granularity);
 
-	const array<double, 3> center; //!< Box center.
-	const array<double, 3> size; //!< 3D sizes of box.
 	const array<double, 3> corner0; //!< Box boundary corner with smallest values of all the 3 dimensions.
 	const array<double, 3> corner1; //!< Box boundary corner with largest values of all the 3 dimensions.
 	const double granularity; //!< 1D size of grids.

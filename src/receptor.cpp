@@ -7,8 +7,6 @@
 #include "receptor.hpp"
 
 receptor::receptor(const path& p, const array<double, 3>& center, const array<double, 3>& size, const double granularity) :
-	center(center),
-	size(size),
 	corner0(center - 0.5 * size),
 	corner1(corner0 + size),
 	granularity(granularity),
