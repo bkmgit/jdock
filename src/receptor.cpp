@@ -6,7 +6,21 @@
 #include "array.hpp"
 #include "receptor.hpp"
 
-receptor::receptor(const path& p, const array<double, 3>& center, const array<double, 3>& size, const double granularity) : center(center), size(size), corner0(center - 0.5 * size), corner1(corner0 + size), granularity(granularity), granularity_inverse(1 / granularity), num_probes({{static_cast<size_t>(size[0] * granularity_inverse) + 2, static_cast<size_t>(size[1] * granularity_inverse) + 2, static_cast<size_t>(size[2] * granularity_inverse) + 2}}), num_probes_product(num_probes[0] * num_probes[1] * num_probes[2]), p_offset(scoring_function::n), maps(scoring_function::n)
+receptor::receptor(const path& p, const array<double, 3>& center, const array<double, 3>& size, const double granularity) :
+	center(center),
+	size(size),
+	corner0(center - 0.5 * size),
+	corner1(corner0 + size),
+	granularity(granularity),
+	granularity_inverse(1 / granularity),
+	num_probes({{
+		static_cast<size_t>(size[0] * granularity_inverse) + 2,
+		static_cast<size_t>(size[1] * granularity_inverse) + 2,
+		static_cast<size_t>(size[2] * granularity_inverse) + 2
+	}}),
+	num_probes_product(num_probes[0] * num_probes[1] * num_probes[2]),
+	p_offset(scoring_function::n),
+	maps(scoring_function::n)
 {
 	// Initialize necessary variables for constructing a receptor.
 	atoms.reserve(5000); // A receptor typically consists of <= 5,000 atoms.
@@ -35,7 +49,7 @@ receptor::receptor(const path& p, const array<double, 3>& center, const array<do
 			// Parse the line.
 			atom a(line);
 
-			// Harmonize a unsupported atom type to carbon.
+			// Harmonize an unsupported atom type to carbon.
 			if (a.ad_unsupported())
 			{
 				a.ad = 2;
@@ -44,7 +58,8 @@ receptor::receptor(const path& p, const array<double, 3>& center, const array<do
 			}
 
 			// Skip non-polar hydrogens.
-			if (a.is_nonpolar_hydrogen()) continue;
+			if (a.is_nonpolar_hydrogen())
+				continue;
 
 			// For a polar hydrogen, the bonded hetero atom must be a hydrogen bond donor.
 			if (a.is_polar_hydrogen())
@@ -163,7 +178,8 @@ void receptor::populate(const vector<size_t>& xs, const size_t z, const scoring_
 		const double dz = z_coord - a.coord[2];
 		const double dz_sqr = dz * dz;
 		const double dydx_sqr_ub = scoring_function::cutoff_sqr - dz_sqr;
-		if (dydx_sqr_ub <= 0) continue;
+		if (dydx_sqr_ub <= 0)
+			continue;
 		const double dydx_ub = sqrt(dydx_sqr_ub);
 		const double y_lb = a.coord[1] - dydx_ub;
 		const double y_ub = a.coord[1] + dydx_ub;
@@ -176,7 +192,8 @@ void receptor::populate(const vector<size_t>& xs, const size_t z, const scoring_
 		{
 			const double dy_sqr = dy * dy;
 			const double dx_sqr_ub = dydx_sqr_ub - dy_sqr;
-			if (dx_sqr_ub <= 0) continue;
+			if (dx_sqr_ub <= 0)
+				continue;
 			const double dx_ub = sqrt(dx_sqr_ub);
 			const double x_lb = a.coord[0] - dx_ub;
 			const double x_ub = a.coord[0] + dx_ub;
@@ -189,7 +206,8 @@ void receptor::populate(const vector<size_t>& xs, const size_t z, const scoring_
 			{
 				const double dx_sqr = dx * dx;
 				const double r2 = dzdy_sqr + dx_sqr;
-				if (r2 >= scoring_function::cutoff_sqr) continue;
+				if (r2 >= scoring_function::cutoff_sqr)
+					continue;
 				const size_t r_offset = static_cast<size_t>(sf.ns * r2);
 				for (size_t i = 0; i < n; ++i)
 				{
