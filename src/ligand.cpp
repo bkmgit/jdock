@@ -346,8 +346,8 @@ result ligand::complete_result_noconf(const array<double, 3>& origin, const scor
 	}
 
 	double e = 0;
-	vector<double> e_residues(rec.residues.size());
 	assert(mask.size() == rec.residues.size());
+	vector<array<double, 6>> e_residues(rec.residues.size());
 	vector<double> e_heavy_atoms(num_heavy_atoms);
 
 	// Calculate inter-ligand free energy.
@@ -362,11 +362,12 @@ result ligand::complete_result_noconf(const array<double, 3>& origin, const scor
 			if (r2 < scoring_function::cutoff_sqr)
 			{
 				const size_t nsr2 = static_cast<size_t>(sf.ns * r2);
-				const double e0 = sf.e[mp(xs, a.xs)][nsr2];
+				const double e0 = sf.e[mp(xs, a.xs)][nsr2]; // Read from template.
 				
 				// Aggregate the energy.
 				e += e0; // Total energy.
-				e_residues[a.residue] += e0; // Per residue energy.
+				scoring_function::score(e_residues[a.residue].data(), xs, a.xs, r2); // Per residue energy component.
+				e_residues[a.residue].back() += e0; // Per residue energy total.
 				e_heavy_atoms[i] += e0; // Per ligand atom energy.
 				mask[a.residue] = true; // Mark contributing residue.
 			}
@@ -658,11 +659,11 @@ void ligand::write_models(const path& output_ligand_path, const vector<result>& 
 		ofs << "MODEL     " << setw(4) << (k + 1) << endl << setprecision(2);
 		if (!r.from_docking)
 			ofs << "REMARK THIS MODEL IS IDENTICAL TO THE INPUT LIGAND AND NOT FROM DOCKING" << endl;
-		ofs << "REMARK 921   NORMALIZED FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.e_nd      << " KCAL/MOL" << endl
-			<< "REMARK 922        TOTAL FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.e         << " KCAL/MOL" << endl
-			<< "REMARK 923 INTER-LIGAND FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.f         << " KCAL/MOL" << endl
-			<< "REMARK 924 INTRA-LIGAND FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << (r.e - r.f) << " KCAL/MOL" << endl
-			<< "REMARK 927      BINDING AFFINITY PREDICTED BY RF-SCORE:" << setw(8) << r.rf        << " PKD" << endl << setprecision(3);
+		ofs << "REMARK 921   NORMALIZED FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.e_nd    << " KCAL/MOL" << endl
+			<< "REMARK 922        TOTAL FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.e       << " KCAL/MOL" << endl
+			<< "REMARK 923 INTER-LIGAND FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.f       << " KCAL/MOL" << endl
+			<< "REMARK 924 INTRA-LIGAND FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.e - r.f << " KCAL/MOL" << endl
+			<< "REMARK 927      BINDING AFFINITY PREDICTED BY RF-SCORE:" << setw(8) << r.rf      << " PKD" << endl << setprecision(3);
 
 		size_t heavy_atom = 0;
 		size_t hydrogen = 0;
@@ -696,11 +697,12 @@ void ligand::write_models(const path& output_ligand_path, const vector<result>& 
 //! Revisit a result and calculate inter-molecular free energy components to every ligand atom and from every receptor residue.
 void ligand::calculate_by_comp(result& result, const scoring_function& sf, const receptor& rec, vector<bool>& mask) const
 {
-	auto &e_residue = result.e_residues, &e_heavy_atoms = result.e_heavy_atoms;
-	assert(e_residue.empty());
+	auto& e_residues = result.e_residues;
+	auto& e_heavy_atoms = result.e_heavy_atoms;
+	assert(e_residues.empty());
 	assert(e_heavy_atoms.empty());
 
-	e_residue.resize(rec.residues.size());
+	e_residues.resize(rec.residues.size());
 	e_heavy_atoms.resize(num_heavy_atoms);
 
 	for (size_t k = 0; k < num_heavy_atoms; ++k)
@@ -727,8 +729,10 @@ void ligand::calculate_by_comp(result& result, const scoring_function& sf, const
 				assert(p < sf.np);
 
 				assert(!sf.e[p].empty());
-				const double e0 = sf.e[p][r_offset];
-				e_residue[a.residue] += e0; // Aggregate the energy for the residue the ligand atom locates in.
+				const double e0 = sf.e[p][r_offset]; // Read from template.
+
+				scoring_function::score(e_residues[a.residue].data(), a.xs, xs, r2);
+				e_residues[a.residue].back() += e0; // Aggregate the energy for the residue the ligand atom locates in.
 				e_heavy_atoms[k] += e0; // Aggregate the energy for the ligand atom.
 
 				// Mark contributing residue.

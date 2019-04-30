@@ -23,6 +23,15 @@ const array<double, scoring_function::n> scoring_function::vdw
 	1.2, // 14 Met_D
 }};
 
+const array<double, 5> scoring_function::weights
+{{
+	-0.035579, // Gauss1
+	-0.005156, // Gauss2
+	 0.840245, // Repulsion
+	-0.035069, // Hydrophobic
+	-0.587439, // Hydrogen Bonding
+}};
+
 //! Returns true if the XScore atom type is hydrophobic.
 inline bool is_hydrophobic(const size_t t)
 {
@@ -70,11 +79,11 @@ double scoring_function::score(const size_t t0, const size_t t1, const double r)
 
 	// The scoring function is a weighted sum of 5 terms.
 	// The first 3 terms depend on d only, while the latter 2 terms depend on t0, t1 and d.
-	return (-0.035579) * exp(-4 * d * d)
-		+  (-0.005156) * exp(-0.25 * (d - 3.0) * (d - 3.0))
-		+  ( 0.840245) * (d > 0 ? 0.0 : d * d)
-		+  (-0.035069) * ((is_hydrophobic(t0) && is_hydrophobic(t1)) ? ((d >= 1.5) ? 0.0 : ((d <= 0.5) ? 1.0 : 1.5 - d)) : 0.0)
-		+  (-0.587439) * ((is_hbond(t0, t1)) ? ((d >= 0) ? 0.0 : ((d <= -0.7) ? 1 : d * (-1.4285714285714286))): 0.0);
+	return weights[0] * exp(-4 * d * d)
+		+  weights[1] * exp(-0.25 * (d - 3.0) * (d - 3.0))
+		+  weights[2] * (d > 0 ? 0.0 : d * d)
+		+  weights[3] * ((is_hydrophobic(t0) && is_hydrophobic(t1)) ? ((d >= 1.5) ? 0.0 : ((d <= 0.5) ? 1.0 : 1.5 - d)) : 0.0)
+		+  weights[4] * ((is_hbond(t0, t1)) ? ((d >= 0) ? 0.0 : ((d <= -0.7) ? 1 : d * (-1.4285714285714286))): 0.0);
 }
 
 void scoring_function::score(double* const v, const size_t t0, const size_t t1, const double r2)

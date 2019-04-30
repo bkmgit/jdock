@@ -11,6 +11,77 @@
 #include "pka.hpp"
 #include "string.hpp"
 
+void write_energy_report(ofstream& file, vector<result>& results, vector<bool>& mask, receptor& rec, bool with_rf_score, function<double(const result&, const size_t)> e_getter)
+{
+	file.setf(ios::fixed, ios::floatfield);
+	file << "Chain ID,Residue name,Residue sequence";
+
+	for (size_t i = 0; i < results.size(); ++i)
+	{
+		file << ",Conf " << i + 1;
+		if (!results[i].from_docking)
+			file << "(Input)";
+	}
+	file << endl << setprecision(3);
+
+	for (size_t k = 0; k < mask.size(); ++k)
+	{
+		if (!mask[k])
+			continue;
+
+		const auto& res = rec.residues[k];
+		file << res.chain << ',' << res.name << ',' << res.seq;
+
+		for (size_t i = 0; i < results.size(); ++i)
+		{
+			file << ',';
+			if (e_getter(results[i], k) != 0.0)
+				file << e_getter(results[i], k);
+		}
+
+		file << endl;
+	}
+
+	file << endl;
+	if (with_rf_score)
+	{
+		file << "Binding Affinity,,";
+		for (size_t i = 0; i < results.size(); ++i)
+		{
+			file << ',' << results[i].rf;
+		}
+		file << endl;
+	}
+
+	file << "Intra-Ligand Free,,";
+	for (size_t i = 0; i < results.size(); ++i)
+	{
+		file << ',' << (results[i].e - results[i].f);
+	}
+	file << endl;
+
+	file << "Inter-Ligand Free,,";
+	for (size_t i = 0; i < results.size(); ++i)
+	{
+		file << ',' << results[i].f;
+	}
+	file << endl;
+
+	file << "Total Free Energy,,";
+	for (size_t i = 0; i < results.size(); ++i)
+	{
+		file << ',' << results[i].e;
+	}
+	file << endl;
+
+	file << "Normalized Total Free Energy,,";
+	for (size_t i = 0; i < results.size(); ++i)
+	{
+		file << ',' << results[i].e_nd;
+	}
+	file << endl;
+}
+
 int main(int argc, char* argv[])
 {
 	path receptor_path, ligand_path, out_path;
@@ -480,74 +551,56 @@ int main(int argc, char* argv[])
 					lig.write_models(output_ligand_path, results, rec);
 
 					// Output per residue energy for all conformations.
-					ofstream rep(out_path / (stem + ".csv"));
-					rep.setf(ios::fixed, ios::floatfield);
-					rep << "Chain ID,Residue name,Residue sequence";
-
-					for (size_t i = 0; i < num_confs; ++i)
+					array<string, 5> terms{ "gauss1", "gauss2", "repulsion", "hydrophobic", "hbonding" };
+					for (size_t ti = 0; ti < terms.size(); ++ti)
 					{
-						rep << ",Conf " << i + 1;
-						if (!results[i].from_docking)
-							rep << "(Input)";
+						write_energy_report(
+							ofstream(out_path / (stem + "_" + terms[ti] + ".csv")),
+							results,
+							mask,
+							rec,
+							with_rf_score,
+							[ti](const result& r, const size_t index)
+							{
+								return r.e_residues[index][ti] * scoring_function::weights[ti];
+							});
 					}
-					rep << endl << setprecision(3);
 
-					for (size_t k = 0; k < mask.size(); ++k)
-					{
-						if (!mask[k])
-							continue;
-
-						const auto& res = rec.residues[k];
-						rep << res.chain << ',' << res.name << ',' << res.seq;
-
-						for (size_t i = 0; i < num_confs; ++i)
+					write_energy_report(
+						ofstream(out_path / (stem + "_steric.csv")),
+						results,
+						mask,
+						rec,
+						with_rf_score,
+						[](const result& r, const size_t index)
 						{
-							rep << ',';
-							if (results[i].e_residues[k] != 0.0)
-								rep << results[i].e_residues[k];
-						}
+							return r.e_residues[index][0] * scoring_function::weights[0]
+								 + r.e_residues[index][1] * scoring_function::weights[1]
+								 + r.e_residues[index][2] * scoring_function::weights[2];
+						});
 
-						rep << endl;
-					}
-
-					rep << endl;
-					if (with_rf_score)
-					{
-						rep << "Binding Affinity,,";
-						for (size_t i = 0; i < num_confs; ++i)
+					write_energy_report(
+						ofstream(out_path / (stem + "_gauss.csv")),
+						results,
+						mask,
+						rec,
+						with_rf_score,
+						[](const result& r, const size_t index)
 						{
-							rep << ',' << results[i].rf;
-						}
-						rep << endl;
-					}
+							return r.e_residues[index][0] * scoring_function::weights[0]
+								+ r.e_residues[index][1] * scoring_function::weights[1];
+						});
 
-					rep << "Intra-Ligand Free,,";
-					for (size_t i = 0; i < num_confs; ++i)
-					{
-						rep << ',' << (results[i].e - results[i].f);
-					}
-					rep << endl;
-
-					rep << "Inter-Ligand Free,,";
-					for (size_t i = 0; i < num_confs; ++i)
-					{
-						rep << ',' << results[i].f;
-					}
-					rep << endl;
-
-					rep << "Total Free Energy,,";
-					for (size_t i = 0; i < num_confs; ++i)
-					{
-						rep << ',' << results[i].e;
-					}
-					rep << endl;
-
-					rep << "Normalized Total Free Energy,,";
-					for (size_t i = 0; i < num_confs; ++i)
-					{
-						rep << ',' << results[i].e_nd;
-					}
-					rep << endl;
+					write_energy_report(
+						ofstream(out_path / (stem + ".csv")),
+						results,
+						mask,
+						rec,
+						with_rf_score,
+						[](const result& r, const size_t index)
+						{
+							return r.e_residues[index][5];
+						});
 
 					// Clear the results of the current ligand.
 					results.clear();

@@ -16,10 +16,10 @@ public:
 	vector<array<double, 3>> heavy_atoms; //!< Heavy atom coordinates.
 	vector<array<double, 3>> hydrogens; //!< Hydrogen atom coordinates.
 	vector<double> e_heavy_atoms; //!< Per heavy atom inter-molecular free energy.
-	vector<double> e_residues; //!< Per residue inter-molecular free energy.
+	vector<array<double, 6>> e_residues; //!< Per residue total of inter-molecular free energy, including unweighted 5 term score components plus the weighted overall score.
 
 	//! Constructs a result from free energy e, force f, whether created from docking, heavy atom coordinates, hydrogen atom coordinates, per heavy atom energy and per residue energy.
-	explicit result(const double e, const double f, bool from_docking, vector<array<double, 3>>&& heavy_atoms, vector<array<double, 3>>&& hydrogens, vector<double>&& e_heavy_atoms, vector<double>&& e_residues)
+	explicit result(const double e, const double f, bool from_docking, vector<array<double, 3>>&& heavy_atoms, vector<array<double, 3>>&& hydrogens, vector<double>&& e_heavy_atoms, vector<array<double, 6>>&& e_residues)
 		: e(e)
 		, f(f)
 		, e_nd()

@@ -16,6 +16,7 @@ public:
 	static const size_t cutoff = 8; //!< Atom type pair distance cutoff.
 	static const size_t nr = ns*cutoff*cutoff+1; //!< Number of samples within the entire cutoff.
 	static const double cutoff_sqr; //!< Cutoff square.
+	static const array<double, 5> weights; //!< Weight constants for 5 terms.
 
 	//! Constructs an empty scoring function.
 	explicit scoring_function();
