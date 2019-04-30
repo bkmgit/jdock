@@ -17,7 +17,7 @@ Features
 Supported operating systems and compilers
 -----------------------------------------
 
-* Linux x86_64 and clang 8.0.0
+* Linux x86_64 and gcc 8.3.1
 * Mac OS X x86_64 and clang 8.0.0
 * Windows x64 and Visual Studio 2019
 
