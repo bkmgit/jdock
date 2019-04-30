@@ -374,6 +374,13 @@ result ligand::complete_result_noconf(const array<double, 3>& origin, const scor
 		}
 	}
 
+	// Weighten the score components.
+	for (auto& e_residue : e_residues)
+	{
+		for (size_t i = 0; i < scoring_function::weights.size(); i++)
+			e_residue[i] *= scoring_function::weights[i];
+	}
+
 	// Save inter-molecular free energy into f.
 	double f = e;
 
@@ -739,6 +746,13 @@ void ligand::calculate_by_comp(result& result, const scoring_function& sf, const
 				mask[a.residue] = true;
 			}
 		}
+	}
+
+	// Weighten the score components.
+	for (auto& e_residue : e_residues)
+	{
+		for (size_t i = 0; i < scoring_function::weights.size(); i++)
+			e_residue[i] *= scoring_function::weights[i];
 	}
 }
 

@@ -22,7 +22,7 @@ void write_energy_report(ofstream& file, vector<result>& results, vector<bool>& 
 		if (!results[i].from_docking)
 			file << "(Input)";
 	}
-	file << endl << setprecision(3);
+	file << endl << setprecision(4);
 
 	for (size_t k = 0; k < mask.size(); ++k)
 	{
@@ -35,7 +35,7 @@ void write_energy_report(ofstream& file, vector<result>& results, vector<bool>& 
 		for (size_t i = 0; i < results.size(); ++i)
 		{
 			file << ',';
-			if (e_getter(results[i], k) != 0.0)
+			if (abs(e_getter(results[i], k)) >= 0.00005)
 				file << e_getter(results[i], k);
 		}
 
@@ -551,56 +551,29 @@ int main(int argc, char* argv[])
 					lig.write_models(output_ligand_path, results, rec);
 
 					// Output per residue energy for all conformations.
-					array<string, 5> terms{ "gauss1", "gauss2", "repulsion", "hydrophobic", "hbonding" };
-					for (size_t ti = 0; ti < terms.size(); ++ti)
+					map<string, function<double(const result&, const size_t)>> schemes
 					{
+						{"_gauss1",      [](auto r, auto index) { return r.e_residues[index][0]; } },
+						{"_gauss2",      [](auto r, auto index) { return r.e_residues[index][1]; } },
+						{"_repulsion",   [](auto r, auto index) { return r.e_residues[index][2]; } },
+						{"_hydrophobic", [](auto r, auto index) { return r.e_residues[index][3]; } },
+						{"_hbonding",    [](auto r, auto index) { return r.e_residues[index][4]; } },
+						{"_gauss",       [](auto r, auto index) { return r.e_residues[index][0] + r.e_residues[index][1]; } },
+						{"_steric",      [](auto r, auto index) { return r.e_residues[index][0] + r.e_residues[index][1] + r.e_residues[index][2]; } },
+						{"",             [](auto r, auto index) { return r.e_residues[index][5]; } },
+					};
+
+					for (auto& [postfix, getter] : schemes)
+					{
+						auto stream = ofstream(out_path / (stem + postfix + ".csv"));
 						write_energy_report(
-							ofstream(out_path / (stem + "_" + terms[ti] + ".csv")),
+							stream,
 							results,
 							mask,
 							rec,
 							with_rf_score,
-							[ti](const result& r, const size_t index)
-							{
-								return r.e_residues[index][ti] * scoring_function::weights[ti];
-							});
+							getter);
 					}
-
-					write_energy_report(
-						ofstream(out_path / (stem + "_steric.csv")),
-						results,
-						mask,
-						rec,
-						with_rf_score,
-						[](const result& r, const size_t index)
-						{
-							return r.e_residues[index][0] * scoring_function::weights[0]
-								 + r.e_residues[index][1] * scoring_function::weights[1]
-								 + r.e_residues[index][2] * scoring_function::weights[2];
-						});
-
-					write_energy_report(
-						ofstream(out_path / (stem + "_gauss.csv")),
-						results,
-						mask,
-						rec,
-						with_rf_score,
-						[](const result& r, const size_t index)
-						{
-							return r.e_residues[index][0] * scoring_function::weights[0]
-								+ r.e_residues[index][1] * scoring_function::weights[1];
-						});
-
-					write_energy_report(
-						ofstream(out_path / (stem + ".csv")),
-						results,
-						mask,
-						rec,
-						with_rf_score,
-						[](const result& r, const size_t index)
-						{
-							return r.e_residues[index][5];
-						});
 
 					// Clear the results of the current ligand.
 					results.clear();
