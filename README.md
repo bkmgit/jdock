@@ -92,7 +92,7 @@ The generated PDF will be `refman.pdf`.
 Change Log
 ----------
 
-### 2.2.3 (2019-04-25)
+### 2.2.3 (2019-04-30)
 
 * Rewrote in C++17. Thanks to @stcmz.
 * Upgraded boost from 1.64.0 to 1.70.0.
