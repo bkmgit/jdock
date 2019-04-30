@@ -4,7 +4,7 @@ bin/idock: obj/io_service_pool.o obj/safe_counter.o obj/array.o obj/atom.o obj/s
 	${CC} -o $@ $^ -pthread -lstdc++fs -L${BOOST_ROOT}/lib -lboost_program_options
 
 obj/%.o: src/%.cpp
-	${CC} -o $@ $< -c -std=c++17 -Wall -Wno-unused-local-typedef -I${BOOST_ROOT}/include
+	${CC} -o $@ $< -c -std=c++17 -Wall -I${BOOST_ROOT}/include
 
 clean:
 	rm -f bin/idock obj/*.o
