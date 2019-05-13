@@ -34,7 +34,11 @@ receptor::receptor(const path& p, bool remove_nonstd, const array<double, 3>& ce
 	, corner1(corner0 + size)
 	, granularity(granularity)
 	, granularity_inverse(1 / granularity)
-	, num_probes({{static_cast<size_t>(size[0] * granularity_inverse) + 2, static_cast<size_t>(size[1] * granularity_inverse) + 2, static_cast<size_t>(size[2] * granularity_inverse) + 2}})
+	, num_probes({{
+		static_cast<size_t>(size[0] * granularity_inverse) + 2,
+		static_cast<size_t>(size[1] * granularity_inverse) + 2,
+		static_cast<size_t>(size[2] * granularity_inverse) + 2
+	}})
 	, num_probes_product(num_probes[0] * num_probes[1] * num_probes[2])
 {
 	parse_pdbqt(p, remove_nonstd);
@@ -126,7 +130,8 @@ void receptor::parse_pdbqt(const path& p, bool remove_nonstd)
 			}
 
 			// Skip non-polar hydrogens.
-			if (a.is_nonpolar_hydrogen()) continue;
+			if (a.is_nonpolar_hydrogen())
+				continue;
 
 			// For a polar hydrogen, the bonded hetero atom must be a hydrogen bond donor.
 			if (a.is_polar_hydrogen())

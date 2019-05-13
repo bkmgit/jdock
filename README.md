@@ -17,9 +17,9 @@ Features
 Supported operating systems and compilers
 -----------------------------------------
 
-* Linux x86_64 and clang 3.9.1
-* Mac OS X x86_64 and darwin 4.2.1
-* Windows x64 and Visual Studio 2017
+* Linux x86_64 and gcc 8.3.1
+* Mac OS X x86_64 and clang 8.0.0
+* Windows x64 and Visual Studio 2019
 
 Pre-built 64-bit executables can be found in the `bin` directory. The executable was statically compiled for Linux and Windows, and dynamically compiled for Mac OS X.
 
@@ -29,7 +29,7 @@ Compilation from source code
 
 Precompiled executables are already provided in the `bin` folder. Should you need to compile from source code, below are some guidelines.
 
-idock depends on the [Boost C++ Libraries]. The Boost libraries required by idock are `System`, `Filesystem`, `Program Options` and `Thread`. Boost 1.64.0 was tested.
+idock depends on the [Boost C++ Libraries]. The boost libraries required by idock are `Program Options` and `Asio`. Boost 1.70.0 was tested.
 
 ### Compilation on Linux
 
@@ -43,11 +43,11 @@ The generated objects will be placed in the `obj` folder, and the generated exec
 
 ### Compilation on Windows
 
-Visual Studio 2017 solution and project files are provided. To compile, simply run
+Visual Studio 2019 solution and project files are provided. To compile, simply run
 
     msbuild /t:Build /p:Configuration=Release
 
-Or one may open `idock.sln` in Visual Studio 2017 and do a full rebuild.
+Or one may open `idock.sln` in Visual Studio 2019 and do a full rebuild.
 
 The generated objects will be placed in the `obj` folder, and the generated executable will be placed in the `bin` folder.
 
@@ -91,6 +91,12 @@ The generated PDF will be `refman.pdf`.
 
 Change Log
 ----------
+
+### 2.2.3 (2019-04-30)
+
+* Rewrote in C++17. Thanks to @stcmz.
+* Upgraded boost from 1.64.0 to 1.70.0.
+* Upgraded RF-Score trained on PDBbind v2018 refined set.
 
 ### 2.2.2 (2017-04-20)
 

@@ -1,6 +1,7 @@
 #include <chrono>
 #include <iostream>
 #include <iomanip>
+#include <filesystem>
 #include <fstream>
 #include <boost/program_options.hpp>
 #include "io_service_pool.hpp"
@@ -84,6 +85,8 @@ void write_energy_report(ofstream& file, vector<result>& results, vector<bool>& 
 
 int main(int argc, char* argv[])
 {
+	using namespace std;
+	using namespace std::filesystem;
 	path receptor_path, ligand_path, out_path;
 	array<double, 3> center, size;
 	size_t seed, num_threads, num_trees, num_tasks, max_conformations;
@@ -97,7 +100,7 @@ int main(int argc, char* argv[])
 		using namespace std::chrono;
 		const path default_out_path = ".";
 		const size_t default_seed = duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
-		const size_t default_num_threads = boost::thread::hardware_concurrency();
+		const size_t default_num_threads = std::thread::hardware_concurrency();
 		const size_t default_num_trees = 500;
 		const size_t default_num_tasks = 64;
 		const size_t default_max_conformations = 9;
@@ -157,7 +160,7 @@ int main(int argc, char* argv[])
 		// If version is requested, print the version and exit.
 		if (vm.count("version"))
 		{
-			cout << "2.2.2a" << endl;
+			cout << "2.2.3a" << endl;
 			return 0;
 		}
 

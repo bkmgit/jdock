@@ -1,8 +1,7 @@
 #include "io_service_pool.hpp"
-using namespace boost;
 
-io_service_pool::io_service_pool(const size_t num_threads)
-	: w(new work(*this))
+io_service_pool::io_service_pool(const size_t num_threads) :
+	w(make_unique<work>(*this))
 {
 	reserve(num_threads);
 	for (size_t i = 0; i < num_threads; ++i)
