@@ -282,9 +282,11 @@ int main(int argc, char* argv[])
 		// Enumerate and sort input ligands.
 		cout << "Enumerating input ligands in " << ligand_path << endl;
 		vector<path> input_ligand_paths;
+		size_t reserved_name_length = 0;
 		if (is_regular_file(ligand_path))
 		{
 			input_ligand_paths.push_back(ligand_path);
+			reserved_name_length = max(reserved_name_length, ligand_path.stem().string().size());
 		}
 		else
 		{
@@ -295,6 +297,7 @@ int main(int argc, char* argv[])
 				const auto ext = input_ligand_path.extension();
 				if (ext != ".pdbqt" && ext != ".PDBQT") continue;
 				input_ligand_paths.push_back(input_ligand_path);
+				reserved_name_length = max(reserved_name_length, input_ligand_path.stem().string().size());
 			}
 		}
 		const size_t num_input_ligands = input_ligand_paths.size();
@@ -344,11 +347,14 @@ int main(int argc, char* argv[])
 			f.clear();
 		}
 
+		// Limit the minimum and maximum length of output to 16 and 32
+		reserved_name_length = max((size_t)16, min((size_t)32, reserved_name_length));
+
 		// Output headers to the standard output and the log file.
 		const char separator = '|';
 		cout << "Creating grid maps of " << granularity << " A and running " << num_tasks << " Monte Carlo searches per ligand" << endl;
 		cout             << setw( 8) << "Index"
-			<< separator << setw(16) << "Ligand"
+			<< separator << setw(reserved_name_length) << "Ligand"
 			<< separator << setw( 8) << "Atoms"
 			<< separator << setw( 8) << "Torsions"
 			<< separator << setw( 6) << "nConfs"
@@ -372,7 +378,7 @@ int main(int argc, char* argv[])
 			// Output the ligand file stem.
 			const string stem = input_ligand_path.stem().string();
 			cout             << setw( 8) << ++index
-				<< separator << setw(16) << stem
+				<< separator << setw(reserved_name_length) << stem
 				<< flush;
 			log << stem;
 
