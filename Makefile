@@ -1,5 +1,5 @@
 CC=g++ -O3
-BIN_NAME=idock
+BIN_NAME=jdock
 OBJ_DIR=obj
 BIN_DIR=../bin
 
