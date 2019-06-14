@@ -91,7 +91,7 @@ int main(int argc, char* argv[])
 	array<double, 3> center, size;
 	size_t seed, num_threads, num_trees, num_tasks, max_conformations;
 	double granularity, ph;
-	bool score_only, both_score_dock, with_rf_score, precise_mode, remove_nonstd, no_ionize;
+	bool score_only, both_score_dock, with_rf_score, precision_mode, remove_nonstd, no_ionize;
 
 	// Process program options.
 	try
@@ -113,12 +113,12 @@ int main(int argc, char* argv[])
 		input_options.add_options()
 			("receptor,r", value<path>(&receptor_path)->required(), "receptor file in PDBQT format")
 			("ligand,l", value<path>(&ligand_path)->required(), "ligand file or folder of ligands in PDBQT format")
-			("center_x,x", value<double>(&center[0]), "x coordinate of the search space center, not required if both --score_only and --precise_mode are on")
-			("center_y,y", value<double>(&center[1]), "y coordinate of the search space center, not required if both --score_only and --precise_mode are on")
-			("center_z,z", value<double>(&center[2]), "z coordinate of the search space center, not required if both --score_only and --precise_mode are on")
-			("size_x", value<double>(&size[0]), "size in the x dimension in Angstrom, not required if both --score_only and --precise_mode are on")
-			("size_y", value<double>(&size[1]), "size in the y dimension in Angstrom, not required if both --score_only and --precise_mode are on")
-			("size_z", value<double>(&size[2]), "size in the z dimension in Angstrom, not required if both --score_only and --precise_mode are on")
+			("center_x,x", value<double>(&center[0]), "x coordinate of the search space center, not required if both --score_only and --precision_mode are on")
+			("center_y,y", value<double>(&center[1]), "y coordinate of the search space center, not required if both --score_only and --precision_mode are on")
+			("center_z,z", value<double>(&center[2]), "z coordinate of the search space center, not required if both --score_only and --precision_mode are on")
+			("size_x", value<double>(&size[0]), "size in the x dimension in Angstrom, not required if both --score_only and --precision_mode are on")
+			("size_y", value<double>(&size[1]), "size in the y dimension in Angstrom, not required if both --score_only and --precision_mode are on")
+			("size_z", value<double>(&size[2]), "size in the z dimension in Angstrom, not required if both --score_only and --precision_mode are on")
 			;
 		options_description output_options("output (optional)");
 		output_options.add_options()
@@ -130,17 +130,17 @@ int main(int argc, char* argv[])
 			("threads", value<size_t>(&num_threads)->default_value(default_num_threads), "number of worker threads to use")
 			("trees", value<size_t>(&num_trees)->default_value(default_num_trees), "number of decision trees in random forest, no effect without --rf_score")
 			("tasks", value<size_t>(&num_tasks)->default_value(default_num_tasks), "number of Monte Carlo tasks for global search")
-			("conformations", value<size_t>(&max_conformations)->default_value(default_max_conformations), "maximum number of binding conformations to write")
-			("granularity", value<double>(&granularity)->default_value(default_granularity), "density of probe atoms of grid maps")
+			("conformations,C", value<size_t>(&max_conformations)->default_value(default_max_conformations), "maximum number of binding conformations to write")
+			("granularity,G", value<double>(&granularity)->default_value(default_granularity), "density of probe atoms of grid maps")
 			("score_only,s", bool_switch(&score_only), "scoring input ligand conformation without docking, this option conflicts with --score_dock")
 			("score_dock,d", bool_switch(&both_score_dock), "scoring input ligand conformation as well as docking, this option conflicts with --score_only")
-			("rf_score,f", bool_switch(&with_rf_score), "compute RF-Score as well")
-			("precise_mode,p", bool_switch(&precise_mode), "precise mode in which no precalculated energy grid map is used, requires --score_only or --score_dock")
+			("rf_score,R", bool_switch(&with_rf_score), "compute RF-Score as well")
+			("precision_mode,p", bool_switch(&precision_mode), "precise mode in which no precalculated energy grid map is used, requires --score_only or --score_dock")
 			("remove_nonstd,a", bool_switch(&remove_nonstd), "remove non standard residues from receptor")
-			("no_ionize,n", bool_switch(&no_ionize), "do NOT detect or use {ligand name}.pka file, thus no ionization/protonation is performed for ligand")
+			("no_ionize,I", bool_switch(&no_ionize), "do NOT detect or use {ligand name}.pka file, thus no ionization/protonation is performed for ligand")
 			("ph", value<double>(&ph)->default_value(default_ph, "7.4"), "pH value used to ionize/protonate the input ligand(s)")
 			("help", "this help information")
-			("version,V", "version information")
+			("version", "version information")
 			("config,c", value<path>(), "configuration file to load options from")
 			;
 		options_description all_options;
@@ -175,7 +175,7 @@ int main(int argc, char* argv[])
 		vm.notify();
 
 		// Validate size and center.
-		if (!score_only || !precise_mode)
+		if (!score_only || !precision_mode)
 		{
 			const string required_options[] = { "center_x", "center_y", "center_z", "size_x", "size_y", "size_z" };
 			for (const auto& opt : required_options)
@@ -251,9 +251,9 @@ int main(int argc, char* argv[])
 			cerr << "Option --score_only and --score_dock cannot be combined" << endl;
 			return 1;
 		}
-		if (precise_mode && !score_only && !both_score_dock)
+		if (precision_mode && !score_only && !both_score_dock)
 		{
-			cerr << "Option --precise_mode must be combined with --score_only or --score_dock" << endl;
+			cerr << "Option --precision_mode must be combined with --score_only or --score_dock" << endl;
 			return 1;
 		}
 	}
@@ -267,7 +267,7 @@ int main(int argc, char* argv[])
 	{
 		// Parse the receptor.
 		cout << "Parsing the receptor " << receptor_path << endl;
-		receptor rec = precise_mode && score_only ? receptor(receptor_path, remove_nonstd) : receptor(receptor_path, remove_nonstd, center, size, granularity);
+		receptor rec = precision_mode && score_only ? receptor(receptor_path, remove_nonstd) : receptor(receptor_path, remove_nonstd, center, size, granularity);
 		cout << "Found " << rec.atoms.size() << " atoms in " << rec.residues.size() << " residues in receptor " << receptor_path << endl;
 
 		// Reserve storage for result containers.
@@ -519,7 +519,7 @@ int main(int argc, char* argv[])
 				if (score_only || both_score_dock)
 				{
 					++num_confs;
-					if (precise_mode)
+					if (precision_mode)
 					{
 						// The returned result is complete with per residue/heavy_atom energy.
 						auto r0 = lig.complete_result_noconf(origin, sf, rec, mask);
