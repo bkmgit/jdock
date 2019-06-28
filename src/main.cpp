@@ -160,7 +160,7 @@ int main(int argc, char* argv[])
 		// If version is requested, print the version and exit.
 		if (vm.count("version"))
 		{
-			cout << "2.2.3a" << endl;
+			cout << "2.2.3b" << endl;
 			return 0;
 		}
 
@@ -562,19 +562,20 @@ int main(int argc, char* argv[])
 					// Output per residue energy for all conformations.
 					map<string, function<double(const result&, const size_t)>> schemes
 					{
-						{"_gauss1",      [](auto r, auto index) { return r.e_residues[index][0]; } },
-						{"_gauss2",      [](auto r, auto index) { return r.e_residues[index][1]; } },
-						{"_repulsion",   [](auto r, auto index) { return r.e_residues[index][2]; } },
-						{"_hydrophobic", [](auto r, auto index) { return r.e_residues[index][3]; } },
-						{"_hbonding",    [](auto r, auto index) { return r.e_residues[index][4]; } },
-						{"_gauss",       [](auto r, auto index) { return r.e_residues[index][0] + r.e_residues[index][1]; } },
-						{"_steric",      [](auto r, auto index) { return r.e_residues[index][0] + r.e_residues[index][1] + r.e_residues[index][2]; } },
-						{"",             [](auto r, auto index) { return r.e_residues[index][5]; } },
+						{"gauss1",      [](auto r, auto index) { return r.e_residues[index][0]; } },
+						{"gauss2",      [](auto r, auto index) { return r.e_residues[index][1]; } },
+						{"repulsion",   [](auto r, auto index) { return r.e_residues[index][2]; } },
+						{"hydrophobic", [](auto r, auto index) { return r.e_residues[index][3]; } },
+						{"hbonding",    [](auto r, auto index) { return r.e_residues[index][4]; } },
+						{"gauss",       [](auto r, auto index) { return r.e_residues[index][0] + r.e_residues[index][1]; } },
+						{"steric",      [](auto r, auto index) { return r.e_residues[index][0] + r.e_residues[index][1] + r.e_residues[index][2]; } },
+						{"nonsteric",   [](auto r, auto index) { return r.e_residues[index][3] + r.e_residues[index][4]; } },
+						{"total",       [](auto r, auto index) { return r.e_residues[index][5]; } },
 					};
 
 					for (auto& [postfix, getter] : schemes)
 					{
-						auto stream = ofstream(out_path / (stem + postfix + ".csv"));
+						auto stream = ofstream(out_path / (stem + '_' + postfix + ".csv"));
 						write_energy_report(
 							stream,
 							results,
