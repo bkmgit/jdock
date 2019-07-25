@@ -39,6 +39,16 @@ const array<string, atom::n> atom::ad_strings
 	"Cs", // 30
 	"Mo", // 31
 	"Si", // 32
+	"B",  // 33
+	"Pt", // 34
+	"Li", // 35
+	"Sb", // 36
+	"Bi", // 37
+	"Ti", // 38
+	"Sn", // 39
+	"Ra", // 40
+	"Tl", // 41
+	"Cr", // 42
 }};
 
 //! Covalent radii of AutoDock4 atom types, factorized by 1.1 for extra allowance.
@@ -78,6 +88,16 @@ const array<double, atom::n> atom::ad_covalent_radii
 	2.475, // 30 = Cs, 2.475 = 1.1 * 2.25
 	1.595, // 31 = Mo, 1.595 = 1.1 * 1.45
 	1.221, // 32 = Si, 1.221 = 1.1 * 1.11
+	0.902, // 33 = B,  0.902 = 1.1 * 0.82
+	1.408, // 34 = Pt, 1.408 = 1.1 * 1.28
+	1.474, // 35 = Li, 1.474 = 1.1 * 1.34
+	1.518, // 36 = Sb, 1.518 = 1.1 * 1.38
+	1.606, // 37 = Bi, 1.606 = 1.1 * 1.46
+	1.496, // 38 = Ti, 1.496 = 1.1 * 1.36
+	1.551, // 39 = Sn, 1.551 = 1.1 * 1.41
+	1.749, // 40 = Ra, 1.749 = 1.1 * 1.59
+	1.628, // 41 = Tl, 1.628 = 1.1 * 1.48
+	1.397, // 42 = Cr, 1.397 = 1.1 * 1.27
 }};
 
 //! Mapping from AutoDock4 atom types to XScore atom types.
@@ -116,6 +136,16 @@ const array<size_t, atom::n> atom::ad_to_xs
 	14, // 30 = Cs -> Met_D = 14, Metal, hydrogen bond donor.
 	14, // 31 = Mo -> Met_D = 14, Metal, hydrogen bond donor.
 	14, // 32 = Si -> Met_D = 14, Metal, hydrogen bond donor.
+	14, // 33 = B  -> Met_D = 14, Metal, hydrogen bond donor.
+	14, // 34 = Pt -> Met_D = 14, Metal, hydrogen bond donor.
+	14, // 35 = Li -> Met_D = 14, Metal, hydrogen bond donor.
+	14, // 36 = Sb -> Met_D = 14, Metal, hydrogen bond donor.
+	14, // 37 = Bi -> Met_D = 14, Metal, hydrogen bond donor.
+	14, // 38 = Ti -> Met_D = 14, Metal, hydrogen bond donor.
+	14, // 39 = Sn -> Met_D = 14, Metal, hydrogen bond donor.
+	14, // 40 = Ra -> Met_D = 14, Metal, hydrogen bond donor.
+	14, // 41 = Tl -> Met_D = 14, Metal, hydrogen bond donor.
+	14, // 42 = Cr -> Met_D = 14, Metal, hydrogen bond donor.
 }};
 
 //! Mapping from AutoDock4 atom types to RF-Score atom types.
@@ -154,6 +184,16 @@ const array<size_t, atom::n> atom::ad_to_rf
 	n, // 30 = Cs -> dummy
 	n, // 31 = Mo -> dummy
 	n, // 32 = Si -> dummy
+	n, // 33 = B  -> dummy
+	n, // 34 = Pt -> dummy
+	n, // 35 = Li -> dummy
+	n, // 36 = Sb -> dummy
+	n, // 37 = Bi -> dummy
+	n, // 38 = Ti -> dummy
+	n, // 39 = Sn -> dummy
+	n, // 40 = Ra -> dummy
+	n, // 41 = Tl -> dummy
+	n, // 42 = Cr -> dummy
 }};
 
 //! Constructs an atom from an ATOM/HETATM line in PDBQT format.
