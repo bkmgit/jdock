@@ -105,10 +105,21 @@ jdock --config idock.conf
 Change Log
 ----------
 
+### 2.2.3b (2020-04-20)
+
+* Merged changes from upstream HongjianLi/idock/v2.x for adding support for ten rare chemical elements
+* Added --ignore_errors program option
+
 ### 2.2.3a (2019-06-14)
 
 * Initial public release based on idock v2.2.3
-
+* Added computation of residue energy contribution
+* Added support for protonation via pka
+* Added per residue output for gauss1/gauss2/gauss/repulsion/steric/hydrophobic/hbonding/nonsteric/total scoring combinations
+* Added program option shortcuts
+* No RF score computation by default (use --rf_score to revert)
+* Removed precompiled binaries in conformance with the US export control regulation
+* More changes see the Feature section above
 
 Reference
 ---------
