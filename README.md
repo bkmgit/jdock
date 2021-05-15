@@ -32,43 +32,77 @@ Supported operating systems and compilers
 Compilation from source code
 ----------------------------
 
-### Compilation of Boost
+### Get Boost
 
-jdock depends on the `Program Options` and `Asio` components in [Boost C++ Libraries]. Boost 1.70.0 was tested. To compile jdock, first download [Boost 1.70] and unpack the archive to `boost_1_70_0/include`.
+jdock depends on the `Program Options` component in [Boost C++ Libraries]. Boost 1.75.0 was tested. There are several ways to get Boost.
+
+#### With `vcpkg` on Windows, macOS or Linux:
+```
+# Note: this will download and build from source
+vcpkg install boost-program-options boost-asio
+```
+
+#### With `nuget` on Windows:
+```
+nuget install boost_program_options-vc142
+```
+
+#### With `apt` on Ubuntu/Debian:
+```
+sudo apt install libboost-program-options-dev
+```
+
+#### With `Homebrew` on macOS:
+```
+brew install boost
+```
+
+#### With `PowerShell` on Windows:
+```
+$Url = "https://sourceforge.net/projects/boost/files/boost-binaries/1.75.0/boost_1_75_0-msvc-14.2-64.exe"
+(New-Object System.Net.WebClient).DownloadFile($Url, "$env:TEMP\boost.exe")
+Start-Process -Wait -FilePath "$env:TEMP\boost.exe" "/SILENT","/SP-","/SUPPRESSMSGBOXES"
+```
+
+#### Build from Source on Linux or Windows:
+
+Download [Boost 1.75] and unpack the archive to `boost_1_75_0/include`.
 
 Build on Linux run:
 ```
-cd boost_1_70_0/include
+cd boost_1_75_0/include
 ./bootstrap.sh
 ./b2 --build-dir=../build/linux_x64 --stagedir=../ -j 8 link=static address-model=64
 ```
 
 Or, on Windows run:
 ```
-cd boost_1_70_0\include
+cd boost_1_75_0\include
 bootstrap.bat
 b2 --build-dir=../build/win_x64 --stagedir=../ -j 8 link=static address-model=64
 ```
 
-Then add the path of the `boost_1_70_0` directory the to the BOOST_ROOT environment variable.
+Then add the path of the `boost_1_75_0` directory the to the BOOST_ROOT environment variable.
 
-### Compilation on Linux
+### Build with CMake
 
-The Makefile uses g++ as the default compiler. To compile, simply run
+This project uses cross-platform build system CMake to build from source. It detects your environment and decides the most appropriate compiler toolset. The minimum version of CMake required is `3.20`. To build, simply run
 ```
-make
-```
-
-One may modify the Makefile to use a different compiler or different compilation options.
-
-The generated objects will be placed in the `obj` folder, and the generated executable will be placed in the `../bin` folder.
-
-Optionally, one may copy the output binary to `/usr/bin` by running
-```
-make setup
+cmake -B build
+cmake --build build
 ```
 
-### Compilation on Windows
+The generated objects and executable will be placed in the `build` folder.
+
+Optionally, on Linux or macOS one may install the output binary to the system (usually `/usr/local/bin`) by running
+```
+sudo cmake --install build
+```
+
+On Windows, the script should be run without sudo but under Administrator. The executable will be copied to an individual directory under `Program Files`.
+
+
+### Build with Visual Studio
 
 Visual Studio 2019 solution and project files are provided. To compile, simply run
 ```
@@ -153,4 +187,4 @@ Author
 [DOI: 10.1109/CIBCB.2012.6217214]: http://dx.doi.org/10.1109/CIBCB.2012.6217214
 [Jacky Lee]: http://www.cse.cuhk.edu.hk/~hjli
 [Maozi Chen]: https://www.linkedin.com/in/maozichen/
-[Boost 1.70]: https://www.boost.org/users/history/version_1_70_0.html
+[Boost 1.75]: https://www.boost.org/users/history/version_1_75_0.html
