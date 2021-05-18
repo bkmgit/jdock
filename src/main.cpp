@@ -161,7 +161,7 @@ int main(int argc, char* argv[])
 		// If version is requested, print the version and exit.
 		if (vm.count("version"))
 		{
-			cout << "2.2.3b" << endl;
+			cout << "2.2.3c (2021-05-17)" << endl;
 			return 0;
 		}
 
