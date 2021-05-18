@@ -141,6 +141,11 @@ jdock --config idock.conf
 Change Log
 ----------
 
+### 2.2.3c (2021-05-17)
+
+* Switched build system from Make to cross-platform CMake
+* Added GitHub Actions workflows for building and releasing binaries
+
 ### 2.2.3b (2020-04-20)
 
 * Merged changes from upstream HongjianLi/idock/v2.x for adding support for ten rare chemical elements
@@ -164,7 +169,7 @@ Reference
 **Maozi Chen**, Zhiwei Feng, Siyi Wang, Weiwei Lin, Xiang-Qun Xie. **MCCS, a scoring function-based characterization method for protein-ligand binding**. *Briefings in Bioinformatics*. 2020, October 14. [DOI: 10.1093/bib/bbaa239](https://doi.org/10.1093/bib/bbaa239) [PubMed: 33051641](https://pubmed.ncbi.nlm.nih.gov/33051641/)
 
 ### idock
-Hongjian Li, Kwong-Sak Leung, and Man-Hon Wong. **idock: A Multithreaded Virtual Screening Tool for Flexible Ligand Docking**. 2012 IEEE Symposium on Computational Intelligence in Bioinformatics and Computational Biology (CIBCB), pp.77-84, San Diego, United States, 9-12 May 2012. [DOI: 10.1109/CIBCB.2012.6217214]
+Hongjian Li, Kwong-Sak Leung, and Man-Hon Wong. **idock: A Multithreaded Virtual Screening Tool for Flexible Ligand Docking**. *2012 IEEE Symposium on Computational Intelligence in Bioinformatics and Computational Biology (CIBCB)*, pp.77-84, San Diego, United States, 9-12 May 2012. [DOI: 10.1109/CIBCB.2012.6217214]
 
 
 Author
