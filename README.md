@@ -36,7 +36,7 @@ Compilation from source code
 
 ### Get Boost
 
-jdock depends on the `Program Options` component in [Boost C++ Libraries]. Boost 1.75.0 was tested. There are several ways to get Boost.
+jdock depends on the `Program Options` and `Asio` components in [Boost C++ Libraries]. Boost 1.75.0 was tested. There are several ways to get Boost.
 
 #### With `vcpkg` on Windows, macOS or Linux:
 ```
