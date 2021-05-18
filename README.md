@@ -1,5 +1,7 @@
 jdock
 =====
+![build workflow](https://github.com/stcmz/jdock/actions/workflows/build.yml/badge.svg)
+![release workflow](https://github.com/stcmz/jdock/actions/workflows/release.yml/badge.svg)
 
 jdock is an extended variant of idock which was originally developed by [@HongjianLi](https://github.com/HongjianLi) and is distributed under the same license.
 
