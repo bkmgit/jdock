@@ -56,7 +56,7 @@ sudo apt install libboost-program-options-dev
 
 #### With `dnf` on Fedora:
 ```
-sudo dnf install boost-program-options boost-devel```
+sudo dnf install boost-program-options boost-devel  glibc-static libstdc++-devel libstdc++-static
 ```
 
 #### With `Homebrew` on macOS:
