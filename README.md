@@ -192,6 +192,6 @@ Author
 [semantic versioning]: http://semver.org
 [CodePlex]: http://idock.codeplex.com
 [DOI: 10.1109/CIBCB.2012.6217214]: http://dx.doi.org/10.1109/CIBCB.2012.6217214
-[Jacky Lee]: http://www.cse.cuhk.edu.hk/~hjli
+[Jacky Lee]: https://github.com/HongjianLi
 [Maozi Chen]: https://www.linkedin.com/in/maozichen/
 [Boost 1.75]: https://www.boost.org/users/history/version_1_75_0.html
