@@ -54,7 +54,7 @@ nuget install boost_program_options-vc142
 sudo apt install libboost-program-options-dev
 ```
 
-### With `dnf` on Fedora:
+#### With `dnf` on Fedora:
 ```
 sudo dnf install boost-program-options boost-devel```
 ```
