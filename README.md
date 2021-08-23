@@ -56,7 +56,11 @@ sudo apt install libboost-program-options-dev
 
 #### With `dnf` on Fedora:
 ```
-sudo dnf install boost-program-options boost-devel```
+sudo dnf install boost-program-options boost-devel  
+```
+jdock is typically statically linked, so the following are also needed and are typically not installed by default
+```
+sudo dnf install glibc-static libstdc++-devel libstdc++-static
 ```
 
 #### With `Homebrew` on macOS:
